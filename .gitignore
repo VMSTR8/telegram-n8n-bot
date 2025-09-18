@@ -1,0 +1,114 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.manifest
+*.spec
+
+# Virtual environments
+venv/
+env/
+.env/
+.envrc
+.env.*
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Test and coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+*.db
+*.sqlite3
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# Pyre
+.pyre/
+
+# Pytest
+.pytest_cache/
+
+# Other
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Node
+node_modules/
+
+# System files
+Thumbs.db
+Desktop.ini
+
+# Custom
+config/__pycache__/
+
+# Ignore secrets
+.env
+.env.local
+.env.*.local
+
+# Ignore compiled files
+*.so
+*.dll
+*.exe
+
+# Ignore lock files
+Pipfile.lock
+poetry.lock
+
+# Ignore documentation builds
+docs/_build/
+
+# Ignore wheel files
+*.whl
+
+# Ignore output
+output/
+
+# Ignore logs
+*.log
+
+# Ignore backup files
+*.bak
+
+# Ignore n8n files
+n8n_data/
+
+# Pycharm
+.idea/
+
+# Other
+.github/
+
+# End of file
