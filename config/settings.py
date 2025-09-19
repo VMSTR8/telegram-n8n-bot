@@ -18,11 +18,11 @@ class DatabaseSettings(BaseSettings):
     port: int = Field(default=5432, description='Порт базы данных')
     user: str = Field(default='postgres', description='Пользователь базы данных')
     password: str = Field(default='password', description='Пароль базы данных')
-    database_name: str = Field(default='telegramBot', description='Имя базы данных')
+    basename: str = Field(default='telegramBot', description='Имя базы данных')
 
     @property
     def url(self) -> str:
-        return f'postgres://{self.user}:{self.password}@{self.host}:{self.port}/{self.database_name}'
+        return f'postgres://{self.user}:{self.password}@{self.host}:{self.port}/{self.basename}'
 
 
 class AppSettings(BaseSettings):
