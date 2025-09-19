@@ -111,4 +111,8 @@ n8n_data/
 # Other
 .github/
 
+# Migrations
+migrations/
+pyproject.toml
+
 # End of file
