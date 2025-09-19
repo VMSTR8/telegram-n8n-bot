@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgresql
+    environment:
+      POSTGRES_USER: ${DATABASE__USER}
+      POSTGRES_PASSWORD: ${DATABASE__PASSWORD}
+      POSTGRES_DB: ${DATABASE__BASENAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+        - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DATABASE__USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  bot:
+    build: .
+    container_name: telegramBot
+    environment:
+      - TELEGRAM__BOT_TOKEN=${TELEGRAM__BOT_TOKEN}
+      - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
+      - TELEGRAM__POLLING_MODE=${TELEGRAM__POLLING_MODE}
+      - TELEGRAM__WEBHOOK_URL=${TELEGRAM__WEBHOOK_URL}
+      - TELEGRAM__WEBHOOK_SECRET=${TELEGRAM__WEBHOOK_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+volumes:
+    postgres_data:
