@@ -33,10 +33,10 @@ inspectdb: ## Автоматическое создание моделей из 
 	docker compose run --rm $(SERVICE) aerich inspectdb
 
 dev-up: ## Запуск в режиме разработки
-	docker compose --profile debug up -d
+	docker compose --profile development up -d
 
 dev-down: ## Остановка режима разработки
-	docker compose --profile debug down
+	docker compose --profile development down
 
 prod-up: ## Запуск в продакшн режиме
 	docker compose --profile production up -d
