@@ -5,12 +5,12 @@ from tortoise import fields
 class Penalty(Model):
 
     id = fields.IntField(pk=True)
-    user = fields.ForeignKeyField(
+    user_id = fields.ForeignKeyField(
         'models.User',
         related_name='penalties',
         description='Пользователь, которому назначен штрафной балл'
     )
-    survey = fields.ForeignKeyField(
+    survey_id = fields.ForeignKeyField(
         'models.Survey',
         related_name='penalties',
         description='Опрос, за который назначен штрафной балл'
@@ -24,4 +24,4 @@ class Penalty(Model):
 
     def __str__(self) -> str:
         """Строковое представление штрафного балла"""
-        return f'Penalty {self.id} for User {self.user} in Survey {self.survey}'
+        return f'Penalty {self.id} for User {self.user_id} in Survey {self.survey_id}'
