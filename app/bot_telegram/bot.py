@@ -1,9 +1,8 @@
+import logging
 from typing import Optional
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
-
-from loguru import logger
 
 from config import settings
 
@@ -26,7 +25,7 @@ class BotManager:
                 token=settings.telegram.bot_token,
                 default=DefaultBotProperties(parse_mode='HTML')
             )
-            logger.info('Бот создан')
+            logging.info('Бот создан')
 
         return self._bot
 
@@ -66,10 +65,10 @@ class BotManager:
         bot = self.create_bot()
         dp = self.create_dispatcher()
         try:
-            logger.info('Запуск бота в режиме polling')
+            logging.info('Запуск бота в режиме polling')
             await dp.start_polling(bot)
         except Exception as e:
-            logger.error(f"Ошибка запуска polling режима: {e}")
+            logging.error(f"Ошибка запуска polling режима: {e}")
             raise
 
     async def start_webhook(self) -> None:
@@ -87,7 +86,7 @@ class BotManager:
                 url=webhook_url,
                 secret_token=settings.telegram.webhook_secret
             )
-            logger.info('Бот запущен в режиме webhook')
+            logging.info('Бот запущен в режиме webhook')
         except Exception as e:
-            logger.error(f"Ошибка установки webhook: {e}")
+            logging.error(f"Ошибка установки webhook: {e}")
             raise
