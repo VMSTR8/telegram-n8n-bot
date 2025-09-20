@@ -34,6 +34,8 @@ class User(Model):
     created_at = fields.DatetimeField(auto_now_add=True, description='Дата и время создания записи')
     updated_at = fields.DatetimeField(auto_now=True, description='Дата и время последнего обновления записи')
 
+    reserved = fields.BooleanField(default=False, description='Есть ли бронь от опросов у пользователя')
+
     class Meta:
         table = "users"
         table_description = "Таблица пользователей Telegram бота"
@@ -42,10 +44,17 @@ class User(Model):
         """Строковое представление пользователя """
         return f'User {self.telegram_id}: {self.role}'
 
+    @property
     def is_creator(self) -> bool:
         """Проверяет, является ли пользователь создателем бота"""
         return self.role == UserRole.CREATOR
 
+    @property
     def is_admin(self) -> bool:
         """Проверяет, является ли пользователь администратором"""
         return self.role in [UserRole.ADMIN, UserRole.CREATOR]
+
+    @property
+    def is_reserved(self) -> bool:
+        """Проверяет, есть ли у пользователя бронь от опросов"""
+        return self.reserved
