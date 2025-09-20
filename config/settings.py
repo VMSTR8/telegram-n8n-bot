@@ -7,7 +7,6 @@ class TelegramBotSettings(BaseSettings):
     """Настройки для Telegram бота"""
     bot_token: Optional[str] = Field(default=None, description='Токен для бота')
     creator_id: Optional[int] = Field(default=None, description='Telegram ID создателя бота')
-    polling_mode: bool = Field(default=True, description='Режим бота: polling/webhook')
     webhook_url: Optional[str] = Field(default=None, description='URL для webhook')
     webhook_secret: Optional[str] = Field(default=None, description='Секретный ключ для webhook')
 
