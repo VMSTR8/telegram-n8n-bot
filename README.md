@@ -32,9 +32,9 @@
      ```sh
      python main.py
      ```
-     или через Docker:
+     или через Docker (для справки команд используйте make help):
      ```sh
-     docker compose up -d
+     make dev-up
      ```
 
 ## Основные паттерны
