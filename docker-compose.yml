@@ -15,6 +15,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    profiles: [production]
     restart: unless-stopped
 
   bot:
@@ -23,15 +24,30 @@ services:
     environment:
       - TELEGRAM__BOT_TOKEN=${TELEGRAM__BOT_TOKEN}
       - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
-      - TELEGRAM__POLLING_MODE=${TELEGRAM__POLLING_MODE}
       - TELEGRAM__WEBHOOK_URL=${TELEGRAM__WEBHOOK_URL}
       - TELEGRAM__WEBHOOK_SECRET=${TELEGRAM__WEBHOOK_SECRET}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ./logs:/app/logs
+    profiles: [development]
+    restart: unless-stopped
+
+  api:
+    build: .
+    container_name: telegramBotAPI
+    environment:
+      - TELEGRAM__BOT_TOKEN=${TELEGRAM__BOT_TOKEN}
+      - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
+      - TELEGRAM__WEBHOOK_URL=${TELEGRAM__WEBHOOK_URL}
+      - TELEGRAM__WEBHOOK_SECRET=${TELEGRAM__WEBHOOK_SECRET}
+      - TZ=${TIMEZONE}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped
+    profiles: [production]
 
 volumes:
     postgres_data:
