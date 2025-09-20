@@ -99,6 +99,7 @@ output/
 
 # Ignore logs
 *.log
+logs/
 
 # Ignore backup files
 *.bak
