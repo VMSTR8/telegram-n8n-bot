@@ -1,6 +1,6 @@
 .PHONY: migrate upgrade downgrade init-db init
 
-SERVICE = api
+SERVICE ?= api
 
 RED = \033[0;31m
 GREEN = \033[0;32m
