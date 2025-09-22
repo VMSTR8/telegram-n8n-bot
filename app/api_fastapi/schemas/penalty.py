@@ -7,8 +7,8 @@ class PenaltySchema(BaseModel):
     Схема для штрафов пользователей за неучастие в опросах.
     """
     id: int
-    user_id: int
-    survey_id: int
+    user: int
+    survey: int
     reason: str
     penalty_date: datetime
 
@@ -17,8 +17,8 @@ class PenaltySchema(BaseModel):
         schema_extra = {
             "example": {
                 "id": 1,
-                "user_id": 123,
-                "survey_id": 456,
+                "user": 123,
+                "survey": 456,
                 "reason": "Неучастие в опросе",
                 "penalty_date": "2023-10-01T12:34:56"
             }
