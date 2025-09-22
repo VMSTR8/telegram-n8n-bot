@@ -6,9 +6,9 @@ class ChatSchema(BaseModel):
     Схема чата Telegram.
     """
     id: int
-    chat_telegram_id: int
+    telegram_id: int
     title: str | None
-    type: str
+    chat_type: str
     thread_id: int | None
 
     class Config:
@@ -16,9 +16,9 @@ class ChatSchema(BaseModel):
         schema_extra = {
             "example": {
                 "id": 1,
-                "chat_telegram_id": -1001234567890,
+                "telegram_id": -1001234567890,
                 "title": "My Telegram Chat",
-                "type": "supergroup",
+                "chat_type": "supergroup",
                 "thread_id": None
             }
         }
