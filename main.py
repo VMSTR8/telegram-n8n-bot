@@ -1,7 +1,10 @@
 import logging
 from asyncio import run
-from app.bot_telegram.bot import BotManager
-from app.bot_telegram.logging import setup_logging
+
+from app.bot_telegram import (
+    BotManager,
+    setup_logging
+)
 
 
 def main() -> None:
@@ -23,7 +26,6 @@ def main() -> None:
     logging.info('Бот запускается в development режиме...')
 
     bot = BotManager()
-
     run(bot.start_polling())
 
 
