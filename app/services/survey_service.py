@@ -17,7 +17,8 @@ class SurveyService:
             description: Optional[str] = None,
     ) -> Survey:
         """
-        Создает новый опрос
+        Создает новый опрос.
+
         :param google_form_id: ID Google формы
         :param title: Название опроса
         :param form_url: URL Google формы
@@ -32,7 +33,8 @@ class SurveyService:
             google_form_id: str
     ) -> Optional[Survey]:
         """
-        Получает опрос по ID Google формы
+        Получает опрос по ID Google формы.
+
         :param google_form_id: ID Google формы
         :return: Объект Survey или None, если не найден
         """
@@ -41,7 +43,8 @@ class SurveyService:
     @staticmethod
     async def get_active_surveys() -> List[Survey]:
         """
-        Получает все активные опросы (не завершенные)
+        Получает все активные опросы (не завершенные).
+
         :return: Список объектов Survey
         """
         pass
