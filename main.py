@@ -23,7 +23,7 @@ def main() -> None:
     Пойдем лучше код писать. (или нет)
     """
     setup_logging()
-    logging.info('Бот запускается в development режиме...')
+    logging.info('Запуск приложения в режиме development...')
 
     bot = BotManager()
     run(bot.start_polling())
