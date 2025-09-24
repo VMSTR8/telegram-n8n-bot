@@ -12,7 +12,8 @@ class ChatService:
             telegram_id: int
     ) -> Optional[Chat]:
         """
-        Получает чат по его Telegram ID
+        Получает чат по его Telegram ID.
+
         :param telegram_id: ID чата в Telegram
         :return: Optional[Chat] - объект чата или None, если не найден
         """
@@ -25,7 +26,8 @@ class ChatService:
             title: Optional[str] = None,
     ) -> Chat:
         """
-        Привязывает чат к базе данных или обновляет его данные, если он уже привязан
+        Привязывает чат к базе данных или обновляет его данные, если он уже привязан.
+
         :param telegram_id: ID чата в Telegram
         :param chat_type: Тип чата (private, group, supergroup, channel)
         :param title: Название чата (если есть)
@@ -53,7 +55,8 @@ class ChatService:
             telegram_id: int
     ) -> bool:
         """
-        Отвязывает чат от базы данных, удаляя его
+        Отвязывает чат от базы данных, удаляя его.
+
         :param telegram_id: ID чата в Telegram
         :return: bool - True, если чат был удален, False если чат не найден
         """
@@ -70,7 +73,8 @@ class ChatService:
             thread_id: int
     ) -> bool:
         """
-        Устанавливает ID треда для чата
+        Устанавливает ID треда для чата.
+
         :param telegram_id: ID чата в Telegram
         :param thread_id: ID треда в чате
         :return: bool - True, если тред был установлен, False если чат не найден
@@ -88,7 +92,8 @@ class ChatService:
             telegram_id: int
     ) -> bool:
         """
-        Удаляет ID треда для чата
+        Удаляет ID треда для чата.
+        
         :param telegram_id: ID чата в Telegram
         :return: bool - True, если тред был удален, False если чат не найден
         """
