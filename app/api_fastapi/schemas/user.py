@@ -27,7 +27,7 @@ class UserSchema(BaseModel):
     last_name: Optional[str] = None
     callsign: str
     role: UserRole = UserRole.USER
-    is_active: bool = True
+    active: bool = True
     created_at: datetime
     updated_at: datetime
     reserved: bool = False
@@ -43,7 +43,7 @@ class UserSchema(BaseModel):
                 "last_name": "Doe",
                 "callsign": "JD123",
                 "role": "user",
-                "is_active": True,
+                "active": True,
                 "created_at": "2023-01-01T12:00:00",
                 "updated_at": "2023-01-02T12:00:00",
                 "reserved": False
