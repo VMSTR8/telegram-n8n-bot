@@ -19,7 +19,8 @@ class PenaltyService:
             penalty_date: datetime = datetime.now(tz=settings.timezone_zoneinfo),
     ) -> Penalty:
         """
-        Добавляет новый штрафной балл пользователю
+        Добавляет новый штрафной балл пользователю.
+
         :param user: id пользователя
         :param survey: id опроса
         :param reason: Причина назначения штрафного балла
@@ -33,7 +34,8 @@ class PenaltyService:
             user: User
     ) -> List[Penalty]:
         """
-        Получает все штрафные баллы пользователя
+        Получает все штрафные баллы пользователя.
+
         :param user: Пользователь (User)
         :return: list[Penalty] - Список штрафных баллов пользователя
         """
@@ -45,7 +47,8 @@ class PenaltyService:
             user: User
     ) -> int:
         """
-        Получает количество штрафных баллов пользователя
+        Получает количество штрафных баллов пользователя.
+
         :param user: Пользователь (User)
         :return: int - Количество штрафных баллов пользователя
         """
@@ -54,7 +57,8 @@ class PenaltyService:
     @staticmethod
     async def get_all_users_with_three_penalties() -> List[Dict]:
         """
-        Получает всех пользователей, у которых 3 и более штрафных баллов
+        Получает всех пользователей, у которых 3 и более штрафных баллов.
+
         :return: list[Dict] - Список пользователей с количеством штрафных баллов
         """
         users = await User.annotate(
@@ -67,7 +71,8 @@ class PenaltyService:
     @staticmethod
     async def delete_all_penalties() -> None:
         """
-        Удаляет все штрафные баллы из базы данных
+        Удаляет все штрафные баллы из базы данных.
+        
         :return: None
         """
         await Penalty.all().delete()
