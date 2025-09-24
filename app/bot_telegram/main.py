@@ -18,6 +18,7 @@ class BotManager:
     def create_bot(self) -> Bot:
         """
         Создает и возвращает экземпляр бота
+
         :return: Bot: Экземпляр бота
         """
         if self.bot is None:
@@ -32,6 +33,7 @@ class BotManager:
     def create_dispatcher(self) -> Dispatcher:
         """
         Создает и возвращает экземпляр диспетчера
+
         :return: Dispatcher: Экземпляр диспетчера
         """
         if self._dispatcher is None:
@@ -45,6 +47,7 @@ class BotManager:
     def bot(self) -> Optional[Bot]:
         """
         Возвращает экземпляр бота
+
         :return: Bot: Экземпляр бота
         """
         return self._bot
@@ -53,6 +56,7 @@ class BotManager:
     def dispatcher(self) -> Optional[Dispatcher]:
         """
         Возвращает экземпляр диспетчера
+
         :return: Dispatcher: Экземпляр диспетчера
         """
         return self._dispatcher
@@ -60,6 +64,7 @@ class BotManager:
     async def start_polling(self) -> None:
         """
         Запускает бота в режиме polling
+
         :return: None
         """
         bot = self.create_bot()
@@ -69,24 +74,4 @@ class BotManager:
             await dp.start_polling(bot)
         except Exception as e:
             logging.error(f"Ошибка запуска polling режима: {e}")
-            raise
-
-    async def start_webhook(self) -> None:
-        """
-        Запускает бота в режиме webhook
-        :return: None
-        """
-        if not settings.telegram.webhook_url or not settings.telegram.webhook_secret:
-            raise ValueError("Webhook URL и секретный ключ должны быть заданы для режима webhook")
-
-        bot = self.create_bot()
-        webhook_url = f'{settings.telegram.webhook_url}/telegram_webhook'
-        try:
-            await bot.set_webhook(
-                url=webhook_url,
-                secret_token=settings.telegram.webhook_secret
-            )
-            logging.info('Бот запущен в режиме webhook')
-        except Exception as e:
-            logging.error(f"Ошибка установки webhook: {e}")
             raise
