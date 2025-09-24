@@ -30,7 +30,7 @@ class User(Model):
     callsign = fields.CharField(max_length=20, unique=True, description='Позывной пользователя')
     role = fields.CharEnumField(UserRole, default=UserRole.USER, description='Роль пользователя')
 
-    is_active = fields.BooleanField(default=True, description='Активен ли пользователь')
+    active = fields.BooleanField(default=True, description='Активен ли пользователь')
     created_at = fields.DatetimeField(auto_now_add=True, description='Дата и время создания записи')
     updated_at = fields.DatetimeField(auto_now=True, description='Дата и время последнего обновления записи')
 
