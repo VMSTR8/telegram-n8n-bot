@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 
 from config import settings
+from app.handlers import UserHandlers
 
 
 class BotManager:
@@ -39,7 +40,11 @@ class BotManager:
         if self._dispatcher is None:
             self._dispatcher = Dispatcher()
 
-            # TODO: Добавить обработчики
+            user_handlers = UserHandlers()
+
+            self._dispatcher.include_router(user_handlers.router)
+
+            logging.info('Диспетчер создан и обработчики зарегистрированы')
 
         return self._dispatcher
 
