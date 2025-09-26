@@ -2,12 +2,16 @@ from typing import Optional, List
 from datetime import datetime
 
 from app.models import Survey
+from config import settings
 
 
 class SurveyService:
     """
     Сервис для работы с опросами Google Forms
     """
+    def __init__(self):
+        self.tz = settings.timezone_zoneinfo
+
     @staticmethod
     async def create_survey(
             google_form_id: str,
@@ -40,11 +44,10 @@ class SurveyService:
         """
         return await Survey.filter(google_form_id=google_form_id).first()
 
-    @staticmethod
-    async def get_active_surveys() -> List[Survey]:
+    async def get_active_surveys(self) -> List[Survey]:
         """
         Получает все активные опросы (не завершенные).
 
         :return: Список объектов Survey
         """
-        pass
+        return await Survey.filter(ended_at__gt=datetime.now(tz=self.tz)).all()
