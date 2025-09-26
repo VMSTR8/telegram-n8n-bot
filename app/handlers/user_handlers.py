@@ -5,13 +5,14 @@ from aiogram.types import Message
 from aiogram.filters import Command, CommandStart
 
 from app.services import UserService, ChatService, SurveyService
-from app.decorators import validate_callsign_create
+from app.decorators import validate_callsign_create, required_user_registration, required_chat_bind
 
 
 class UserHandlers:
     """
     Класс для обработки пользовательских команд и сообщений.
     """
+
     def __init__(self):
         self.router = Router()
         self.user_service = UserService()
@@ -71,18 +72,35 @@ class UserHandlers:
             '• `/surveys` - Статус прохождения опросов\n'
             '• `/help` - Показать эту справку\n\n'
             '🔧 Администратор:\n'
+            '• `/bind` - Привязать чат к бота\n'
+            '• `/unbind` - Отвязать чат от бота\n'
+            '• `/bind_thread` - Назначить тред для оповещений по опросам\n'
+            '• `/unbind_thread` - Снять тред для оповещений по опросам\n'
+            '• `/reserve позывной` - Повесить или снять бронь на прохождение опросов '
+            'для конкретного пользователя\n\n'
             '👑 Создатель:\n'
+            '• `/add_admin позывной` - Добавить администратора\n'
+            '• `/remove_admin позывной` - Убрать администратора\n'
+            '• `/admin_list` - Показать список администраторов\n'
+            '• `/create_survey название время_окончания` - Создать опрос\n'
         )
         await message.reply(text=help_text, parse_mode='Markdown')
 
     @validate_callsign_create
     async def register_command(self, message: Message, callsign: str) -> None:
+        """
+        Обработчик команды /reg. Регистрирует нового пользователя с указанным позывным.
+
+        :param message: Message - входящее сообщение от пользователя
+        :param callsign: str - позывной пользователя
+        :return: None
+        """
         try:
             user_exists = await self.user_service.get_user_by_telegram_id(message.from_user.id)
             if user_exists:
                 await message.reply(
                     text=f'❌ Вы уже зарегистрированы в системе.\n'
-                    f'Ваш позывной: {user_exists.callsign.capitalize()}\n',
+                         f'Ваш позывной: {user_exists.callsign.capitalize()}\n',
                     parse_mode='Markdown'
                 )
                 return
@@ -97,10 +115,10 @@ class UserHandlers:
 
             await message.reply(
                 text=f'✅ Вы успешно зарегистрировались!\n'
-                f'Позывной: {user.callsign.capitalize()}\n'
-                f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
-                f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
-                f'Username: {f'@{user.username}' if user.username else 'username не указан'}',
+                     f'Позывной: {user.callsign.capitalize()}\n'
+                     f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
+                     f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
+                     f'Username: {f'@{user.username}' if user.username else 'username не указан'}',
                 parse_mode='Markdown'
             )
 
@@ -112,11 +130,60 @@ class UserHandlers:
             )
             logging.error(f'Ошибка при регистрации пользователя: {e}')
 
+    @required_user_registration
     async def update_command(self, message: Message) -> None:
+        # TODO: Реализовать обновление профиля пользователя
         pass
 
+    @required_user_registration
     async def profile_command(self, message: Message) -> None:
-        pass
+        """
+        Обработчик команды /profile. Отправляет информацию о профиле пользователя.
 
+        :param message: Message - входящее сообщение от пользователя
+        :return: None
+        """
+        user = await self.user_service.get_user_by_telegram_id(message.from_user.id)
+
+        profile_text = (
+            f'👤 *Профиль пользователя*\n\n'
+            f'🆔 Позывной: `{user.callsign}'
+            f'👤 Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
+            f'👥 Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
+            f'🔗 Username: {f'@{user.username}' if user.username else 'username не указан'}\n'
+            f'📅 Зарегистрирован: {user.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n'
+            f'🔄 Профиль обновлён: {user.updated_at.strftime('%Y-%m-%d %H:%M:%S')}\n'
+            f'🛡️ Бронь от опросов: {'Есть' if user.reserved else 'Нет'}\n'
+            f'⚙️ Роль: {user.role.value.capitalize()}'
+        )
+
+        await message.reply(text=profile_text, parse_mode='Markdown')
+
+    @required_chat_bind
+    @required_user_registration
     async def surveys_command(self, message: Message) -> None:
-        pass
+        """
+        Обработчик команды /surveys. Отправляет список активных опросов
+        с прикрепленными ссылками.
+
+        :param message: Message - входящее сообщение от пользователя
+        :return: None
+        """
+        active_surveys = await self.survey_service.get_active_surveys()
+
+        if not active_surveys:
+            await message.reply(
+                text='В данный момент нет активных опросов\n¯\_(ツ)_/¯',
+                parse_mode='Markdown'
+            )
+            return
+
+        surveys_text = '📋 *Активные опросы:*\n\n'
+        for survey in active_surveys:
+            surveys_text += (
+                f'• *{survey.title}*\n'
+                f'  🔗 [Перейти к опросу]({survey.form_url})\n'
+                f'  🕒 Завершение: {survey.ended_at.strftime('%Y-%m-%d %H:%M:%S')}\n\n'
+            )
+
+        await message.reply(text=surveys_text, parse_mode='Markdown')
