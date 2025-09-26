@@ -16,15 +16,24 @@ def validate_callsign_create(func: Callable[..., Awaitable[Any]]) -> Callable[..
     :param func: Функция, которую декорируем
     :return: Обернутая функция
     """
-
     @wraps(func)
     async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> Any:
+
+        if not message.text:
+            await message.reply(
+                text='❌ Неверный формат команды.\n'
+                     'Отправь команду `/reg позывной`\n'
+                     'Команда не должна содержать ничего, кроме текста!',
+                parse_mode='Markdown'
+            )
+            return
+
         command_parts = message.text.split()
         if len(command_parts) != 2:
             await message.reply(
                 text='❌ Нужно обязательно написать свой позывной '
                      '(одно слово) '
-                     'в текстовом поле после команды.\n'
+                     'в текстовом поле после команды.\n\n'
                      'Используйте: `/reg позывной`\n\n'
                      'Требования к позывному:\n'
                      '🔤 Только латинские буквы\n'
@@ -39,8 +48,8 @@ def validate_callsign_create(func: Callable[..., Awaitable[Any]]) -> Callable[..
         validation_result = validate_callsign_format(callsign)
         if not validation_result.is_valid:
             await message.reply(
-                text=f'❌ Неверный формат позывного.\n'
-                     f'{validation_result.error_message}\n'
+                text=f'❌ Неверный формат позывного.\n\n'
+                     f'{validation_result.error_message}\n\n'
                      f'Используйте: `/reg позывной`\n\n'
                      f'Требования к позывному:\n'
                      f'🔤 Только латинские буквы\n'
