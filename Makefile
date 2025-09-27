@@ -1,6 +1,7 @@
 .PHONY: migrate upgrade downgrade init-db init
 
-SERVICE ?= api
+PRODUCTION ?= api
+DEV ?= dev
 
 RED = \033[0;31m
 GREEN = \033[0;32m
@@ -20,35 +21,20 @@ env: ## Создание файла .env из env.example
 		cp env.example .env; \
 	fi
 
-init: ## Инициализация aerich (запустить один раз)
-	docker compose run --rm bot aerich init -t config.TORTOISE_ORM
-
-init-db: ## Инициализация базы данных (запустить один раз)
-	docker compose run --rm $(SERVICE) aerich init-db
-
-migrate: ## Создание миграции
-	docker compose run --rm $(SERVICE) aerich migrate
-
-upgrade: ## Применение миграции
-	docker compose run --rm $(SERVICE) aerich upgrade
-
-downgrade: ## Откат миграции
-	docker compose run --rm $(SERVICE) aerich downgrade
-
-history: ## Просмотр истории миграций
-	docker compose run --rm $(SERVICE) aerich history
-
-inspectdb: ## Автоматическое создание моделей из существующей базы данных
-	docker compose run --rm $(SERVICE) aerich inspectdb
-
 dev-up: ## Запуск в режиме разработки
 	docker compose --profile development up -d
 
 dev-down: ## Остановка режима разработки
 	docker compose --profile development down
 
+dev-build: ## Сборка образов для разработки
+	docker compose --profile development build
+
 prod-up: ## Запуск в продакшн режиме
 	docker compose --profile production up -d
 
 prod-down: ## Остановка продакшн режима
 	docker compose --profile production down
+
+prod-build: ## Сборка образов для продакшн режима
+	docker compose --profile production build
