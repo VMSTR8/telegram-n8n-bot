@@ -6,6 +6,8 @@ from aiogram.client.default import DefaultBotProperties
 
 from config import settings
 from app.handlers import UserHandlers
+from app.services import UserService
+from app.models import UserRole
 
 
 class BotManager:
@@ -15,6 +17,8 @@ class BotManager:
     def __init__(self):
         self._bot: Optional[Bot] = None
         self._dispatcher: Optional[Dispatcher] = None
+        self.user_service = UserService()
+        self.creator_id = settings.telegram.creator_id
 
     def create_bot(self) -> Bot:
         """
@@ -47,6 +51,23 @@ class BotManager:
             logging.info('Диспетчер создан и обработчики зарегистрированы')
 
         return self._dispatcher
+    
+    async def ensure_creator_exists(self) -> None:
+        """
+        Проверяет и создает пользователя-создателя, если его нет
+
+        :return: None
+        """
+        creator = await self.user_service.get_user_by_telegram_id(self.creator_id)
+        if creator is None:
+            creator = await self.user_service.create_user(
+                telegram_id=self.creator_id,
+                callsign='creator',
+                role=UserRole.CREATOR
+            )
+            logging.info(f'Создан пользователь-создатель: {creator.callsign.capitalize()}')
+        else:
+            logging.info('Пользователь-создатель уже существует, пропускаем создание')
 
     @property
     def bot(self) -> Optional[Bot]:
