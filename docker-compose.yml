@@ -8,8 +8,6 @@ services:
       POSTGRES_PASSWORD: ${DATABASE__PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-        - "5432:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DATABASE__USER}" ]
       interval: 10s
@@ -18,7 +16,26 @@ services:
     profiles: [production]
     restart: unless-stopped
 
-  bot:
+  postgres_dev:
+    image: postgres:15
+    container_name: postgresql_dev
+    environment:
+      POSTGRES_DB: ${DATABASE__BASENAME}
+      POSTGRES_USER: ${DATABASE__USER}
+      POSTGRES_PASSWORD: ${DATABASE__PASSWORD}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+        - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DATABASE__USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: [development]
+    restart: unless-stopped
+
+  dev:
     build: .
     container_name: telegramBot
     environment:
@@ -26,9 +43,18 @@ services:
       - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
       - TELEGRAM__WEBHOOK_URL=${TELEGRAM__WEBHOOK_URL}
       - TELEGRAM__WEBHOOK_SECRET=${TELEGRAM__WEBHOOK_SECRET}
+      - DATABASE__HOST=${DATABASE__HOST}
+      - DATABASE__PORT=${DATABASE__PORT}
+      - DATABASE__USER=${DATABASE__USER}
+      - DATABASE__PASSWORD=${DATABASE__PASSWORD}
+      - DATABASE__BASENAME=${DATABASE__BASENAME}
       - TZ=${TIMEZONE}
+    depends_on:
+      postgres_dev:
+        condition: service_healthy
     volumes:
       - ./logs:/app/logs
+      - ./migrations:/app/migrations
     profiles: [development]
     restart: unless-stopped
 
@@ -40,6 +66,11 @@ services:
       - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
       - TELEGRAM__WEBHOOK_URL=${TELEGRAM__WEBHOOK_URL}
       - TELEGRAM__WEBHOOK_SECRET=${TELEGRAM__WEBHOOK_SECRET}
+      - DATABASE__HOST=${DATABASE__HOST}
+      - DATABASE__PORT=${DATABASE__PORT}
+      - DATABASE__USER=${DATABASE__USER}
+      - DATABASE__PASSWORD=${DATABASE__PASSWORD}
+      - DATABASE__BASENAME=${DATABASE__BASENAME}
       - TZ=${TIMEZONE}
     depends_on:
       postgres:
@@ -52,3 +83,4 @@ services:
 
 volumes:
     postgres_data:
+    postgres_dev_data:
