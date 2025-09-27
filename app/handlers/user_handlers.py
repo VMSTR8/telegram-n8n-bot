@@ -6,6 +6,7 @@ from aiogram.filters import Command, CommandStart
 
 from app.services import UserService, ChatService, SurveyService
 from app.decorators import validate_callsign_create, required_user_registration, required_chat_bind
+from config.settings import settings
 
 
 class UserHandlers:
@@ -99,8 +100,8 @@ class UserHandlers:
             user_exists = await self.user_service.get_user_by_telegram_id(message.from_user.id)
             if user_exists:
                 await message.reply(
-                    text=f'❌ Вы уже зарегистрированы в системе.\n'
-                         f'Ваш позывной: {user_exists.callsign.capitalize()}\n',
+                    text=f'❌ Вы уже зарегистрированы в системе.\n\n'
+                         f'Ваш позывной: *{user_exists.callsign.capitalize()}*',
                     parse_mode='Markdown'
                 )
                 return
@@ -145,14 +146,18 @@ class UserHandlers:
         """
         user = await self.user_service.get_user_by_telegram_id(message.from_user.id)
 
+        tz = settings.timezone_zoneinfo
+
         profile_text = (
             f'👤 *Профиль пользователя*\n\n'
-            f'🆔 Позывной: `{user.callsign}'
+            f'🆔 Позывной: `{user.callsign.capitalize()}`\n'
             f'👤 Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
             f'👥 Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
-            f'🔗 Username: {f'@{user.username}' if user.username else 'username не указан'}\n'
-            f'📅 Зарегистрирован: {user.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n'
-            f'🔄 Профиль обновлён: {user.updated_at.strftime('%Y-%m-%d %H:%M:%S')}\n'
+            f'🔗 Username: {f'@{user.username}' if user.username else 'Не указан'}\n'
+            f'📅 Зарегистрирован: '
+            f'{user.created_at.astimezone(tz=tz).strftime('%d.%m.%Y %H:%M')}\n'
+            f'🔄 Профиль обновлён: '
+            f'{user.updated_at.astimezone(tz=tz).strftime('%d.%m.%Y %H:%M')}\n'
             f'🛡️ Бронь от опросов: {'Есть' if user.reserved else 'Нет'}\n'
             f'⚙️ Роль: {user.role.value.capitalize()}'
         )
@@ -173,7 +178,7 @@ class UserHandlers:
 
         if not active_surveys:
             await message.reply(
-                text='В данный момент нет активных опросов\n¯\_(ツ)_/¯',
+                text='В данный момент нет активных опросов\n¯\\_(ツ)_/¯',
                 parse_mode='Markdown'
             )
             return
