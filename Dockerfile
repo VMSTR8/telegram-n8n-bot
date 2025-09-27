@@ -32,5 +32,5 @@ USER appuser
 # Открываем порт для FastAPI
 EXPOSE 8000
 
-# Запускаем приложение
-CMD ["python", "main.py"]
+# Запускаем через entrypoint-скрипт
+CMD ["/bin/bash", "scripts/entrypoint.sh"]
