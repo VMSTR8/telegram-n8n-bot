@@ -33,6 +33,7 @@ class UserService:
     async def create_user(
             telegram_id: int,
             callsign: str,
+            role: UserRole = UserRole.USER,
             first_name: Optional[str] = None,
             last_name: Optional[str] = None,
             username: Optional[str] = None,
@@ -42,6 +43,7 @@ class UserService:
 
         :param telegram_id: ID пользователя в Telegram
         :param callsign: Позывной пользователя
+        :param role: Роль пользователя (по умолчанию USER)
         :param first_name: Имя пользователя (если есть)
         :param last_name: Фамилия пользователя (если есть)
         :param username: Никнейм пользователя в Telegram (если есть)
@@ -51,6 +53,7 @@ class UserService:
         user = await User.create(
             telegram_id=telegram_id,
             callsign=callsign,
+            role=role,
             first_name=first_name,
             last_name=last_name,
             username=username
