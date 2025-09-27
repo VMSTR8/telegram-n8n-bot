@@ -1,11 +1,32 @@
 import logging
 from asyncio import run
+import sys
 
 from app.bot_telegram import (
     BotManager,
     setup_logging
 )
+from app.bot_telegram import init_database
 
+
+async def async_main() -> None:
+    """
+    Асинхронная основная функция для инициализации и запуска бота.
+
+    :return: None
+    """
+    setup_logging()
+    
+    logging.info('Запуск приложения в режиме development...')
+
+    bot = BotManager()
+    
+    await init_database()
+    logging.info('База данных инициализирована')
+    
+    await bot.ensure_creator_exists()
+
+    await bot.start_polling()
 
 def main() -> None:
     """
@@ -22,11 +43,11 @@ def main() -> None:
     Вот и я так же.
     Пойдем лучше код писать. (или нет)
     """
-    setup_logging()
-    logging.info('Запуск приложения в режиме development...')
-
-    bot = BotManager()
-    run(bot.start_polling())
+    try:
+        run(async_main())
+    except Exception as e:
+        logging.error(f'Ошибка при запуске бота: {e}')
+        sys.exit(1)
 
 
 if __name__ == "__main__":
