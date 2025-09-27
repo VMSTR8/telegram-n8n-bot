@@ -1,6 +1,7 @@
 import logging
 from tortoise import Tortoise
 from config import settings
+import sys
 
 
 async def init_database() -> None:
@@ -13,13 +14,12 @@ async def init_database() -> None:
             db_url=settings.database.url,
             modules={'models': ['app.models']}
         )
+        await Tortoise.get_connection("default").execute_query("SELECT 1;")
         logging.info("Подключение к базе данных успешно инициализировано.")
-        logging.warning('ВНИМАНИЕ! Миграции выполняются вручную через aerich!')
-        logging.warning('Для справки по миграциям введите команду make help')
 
     except Exception as e:
         logging.error(f"Ошибка при инициализации базы данных: {e}")
-        raise
+        sys.exit(1)
 
 
 async def close_database() -> None:
