@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class ChatSchema(BaseModel):
     """
-    Схема чата Telegram.
+    Schema representing a chat in the system.
     """
     id: int
     telegram_id: int
