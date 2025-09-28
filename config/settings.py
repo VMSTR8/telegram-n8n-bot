@@ -5,20 +5,20 @@ from pydantic_settings import BaseSettings
 
 
 class TelegramBotSettings(BaseSettings):
-    """Настройки для Telegram бота"""
-    bot_token: Optional[str] = Field(default=None, description='Токен для бота')
-    creator_id: Optional[int] = Field(default=None, description='Telegram ID создателя бота')
-    webhook_url: Optional[str] = Field(default=None, description='URL для webhook')
-    webhook_secret: Optional[str] = Field(default=None, description='Секретный ключ для webhook')
+    """Settings for the Telegram bot"""
+    bot_token: Optional[str] = Field(default=None, description='Bot token')
+    creator_id: Optional[int] = Field(default=None, description='Telegram ID of the bot creator')
+    webhook_url: Optional[str] = Field(default=None, description='Webhook URL')
+    webhook_secret: Optional[str] = Field(default=None, description='Webhook secret key')
 
 
 class DatabaseSettings(BaseSettings):
-    """Настройки для базы данных"""
-    host: str = Field(default='localhost', description='Хост базы данных')
-    port: int = Field(default=5432, description='Порт базы данных')
-    user: str = Field(default='postgres', description='Пользователь базы данных')
-    password: str = Field(default='password', description='Пароль базы данных')
-    basename: str = Field(default='telegramBot', description='Имя базы данных')
+    """Settings for the database connection"""
+    host: str = Field(default='localhost', description='Database host')
+    port: int = Field(default=5432, description='Database port')
+    user: str = Field(default='postgres', description='Database user')
+    password: str = Field(default='password', description='Database password')
+    basename: str = Field(default='telegramBot', description='Database name')
 
     @property
     def url(self) -> str:
@@ -26,16 +26,17 @@ class DatabaseSettings(BaseSettings):
 
 
 class AppSettings(BaseSettings):
-    """Основные настройки приложения"""
-    timezone: str = Field(default='Europe/Moscow', description='Часовой пояс приложения', exclude=True)
+    """Main application settings"""
+    timezone: str = Field(default='Europe/Moscow', description='Application timezone', exclude=True)
     telegram: TelegramBotSettings = Field(default_factory=TelegramBotSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
 
     @property
     def timezone_zoneinfo(self) -> ZoneInfo:
         """
-        Возвращает объект ZoneInfo для часового пояса приложения
-        :return: ZoneInfo объект
+        Returns the timezone as a ZoneInfo object.
+
+        :return: ZoneInfo object corresponding to the configured timezone
         """
         return ZoneInfo(self.timezone)
 
