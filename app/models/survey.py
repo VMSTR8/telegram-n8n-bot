@@ -4,27 +4,27 @@ from tortoise import fields
 
 class Survey(Model):
     """
-    Модель опроса Google Forms
+    Model representing a Google Forms survey.
     """
     id = fields.IntField(pk=True)
-    google_form_id = fields.CharField(max_length=255, unique=True, description='ID Google формы')
-    title = fields.CharField(max_length=255, description='Название опроса')
-    description = fields.TextField(null=True, description='Описание опроса')
-    form_url = fields.CharField(max_length=512, description='URL Google')
+    google_form_id = fields.CharField(max_length=255, unique=True, description='Google Form ID')
+    title = fields.CharField(max_length=255, description='Survey title')
+    description = fields.TextField(null=True, description='Survey description')
+    form_url = fields.CharField(max_length=512, description='Google Form URL')
 
-    is_sent = fields.BooleanField(default=False, description='Отправлен ли опрос пользователям')
-    created_at = fields.DatetimeField(auto_now_add=True, description='Дата и время создания записи')
-    ended_at = fields.DatetimeField(description='Дата и время завершения опроса')
+    is_sent = fields.BooleanField(default=False, description='Send status to users')
+    created_at = fields.DatetimeField(auto_now_add=True, description='Date and time of survey creation')
+    ended_at = fields.DatetimeField(description='Date and time of survey completion')
 
     class Meta:
         table = "surveys"
-        table_description = "Опросы Google Forms"
+        table_description = "Google Forms surveys"
 
     def __str__(self) -> str:
-        """Строковое представление опроса"""
+        """String representation of the survey"""
         return f'Survey {self.title}: {self.form_url}'
 
     @property
     def is_notified(self) -> bool:
-        """Проверяет, был ли опрос отправлен пользователям"""
+        """Checks if the survey has been sent to users"""
         return self.is_sent
