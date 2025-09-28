@@ -19,13 +19,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     :param app: FastAPI - FastAPI application instance
     :return: AsyncGenerator[None, None] - asynchronous generator.
     """
-    logging.info('Запуск приложения в режиме production...')
+    logging.info('Starting application in production mode...')
 
     try:
         await init_database()
-        logging.info('База данных инициализирована')
+        logging.info('Database initialized successfully.')
     except Exception as e:
-        logging.error(f'Ошибка инициализации базы данных: {e}')
+        logging.error(f'Error occurred during database initialization: {e}')
         raise
 
     try:
@@ -35,11 +35,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             url=webhook_url,
             secret_token=settings.telegram.webhook_secret
         )
-        logging.info(f'Webhook успешно установлен по адресу: {webhook_url}')
+        logging.info(f'Webhook successfully set at: {webhook_url}')
     except Exception as e:
-        logging.error(f'Ошибка установки webhook: {e}')
+        logging.error(f'Error occurred while setting webhook: {e}')
 
-    logging.info('Приложение успешно запущено')
+    logging.info('Application started successfully.')
 
     yield
 
