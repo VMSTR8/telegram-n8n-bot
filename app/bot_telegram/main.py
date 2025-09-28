@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 
 from config import settings
-from app.handlers import UserHandlers, AdminHandlers
+from app.handlers import UserHandlers, AdminHandlers, SystemHandlers
 from app.services import UserService
 from app.models import UserRole
 
@@ -31,7 +31,7 @@ class BotManager:
                 token=settings.telegram.bot_token,
                 default=DefaultBotProperties(parse_mode='HTML')
             )
-            logging.info('Бот создан')
+            logging.info('Bot instance created successfully.')
 
         return self._bot
 
@@ -46,11 +46,13 @@ class BotManager:
 
             user_handlers = UserHandlers()
             admin_handlers = AdminHandlers()
+            system_handlers = SystemHandlers()
 
             self._dispatcher.include_router(user_handlers.router)
             self._dispatcher.include_router(admin_handlers.router)
+            self._dispatcher.include_router(system_handlers.router)
 
-            logging.info('Диспетчер создан и обработчики зарегистрированы')
+            logging.info('Dispatcher created and handlers registered successfully.')
 
         return self._dispatcher
     
@@ -67,9 +69,9 @@ class BotManager:
                 callsign='creator',
                 role=UserRole.CREATOR
             )
-            logging.info(f'Создан пользователь-создатель: {creator.callsign.capitalize()}')
+            logging.info(f'User with "CREATOR" role created: {creator.callsign.capitalize()}')
         else:
-            logging.info('Пользователь-создатель уже существует, пропускаем создание')
+            logging.info('Creator user already exists, skipping creation.')
 
     @property
     def bot(self) -> Optional[Bot]:
@@ -98,8 +100,8 @@ class BotManager:
         bot = self.create_bot()
         dp = self.create_dispatcher()
         try:
-            logging.info('Запуск бота в режиме polling')
+            logging.info('Starting bot in polling mode...')
             await dp.start_polling(bot)
         except Exception as e:
-            logging.error(f"Ошибка запуска polling режима: {e}")
+            logging.error(f"Error occurred while starting polling: {e}")
             raise
