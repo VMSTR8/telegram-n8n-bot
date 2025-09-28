@@ -11,12 +11,12 @@ def setup_logging() -> None:
     logs_dir.mkdir(exist_ok=True)
 
     console_format = logging.Formatter(
-        "%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
-        "%Y-%m-%d %H:%M:%S"
+        '%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s',
+        '%Y-%m-%d %H:%M:%S'
     )
     file_format = logging.Formatter(
-        "%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
-        "%Y-%m-%d %H:%M:%S"
+        '%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s',
+        '%Y-%m-%d %H:%M:%S'
     )
 
     root_logger = logging.getLogger()
@@ -41,4 +41,4 @@ def setup_logging() -> None:
     error_handler.setFormatter(file_format)
     root_logger.addHandler(error_handler)
 
-    logging.info("Логирование настроено.")
+    logging.info('Logging is set up.')
