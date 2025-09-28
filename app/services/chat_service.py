@@ -1,79 +1,73 @@
 from typing import Optional
-
+from tortoise.transactions import in_transaction
 from app.models import Chat
+
+
+class ChatAlreadyBoundError(Exception):
+    """
+    Exception raised when trying to bind a chat
+    but a chat is already bound in the database.
+    """
+    pass
 
 
 class ChatService:
     """
-    Сервис для управления чатами Telegram бота
+    Service class for managing chat-related operations.
     """
-    
+
     @staticmethod
     async def get_chat_by_telegram_id(
             telegram_id: int
     ) -> Optional[Chat]:
         """
-        Получает чат по его Telegram ID.
+        Gets a chat by its Telegram ID.
 
-        :param telegram_id: ID чата в Telegram
-        :return: Optional[Chat] - объект чата или None, если не найден
+        :param telegram_id: Telegram ID of the chat
+        :return: Optional[Chat] - Chat object or None if not found
         """
         return await Chat.filter(telegram_id=telegram_id).first()
 
     async def bind_chat(
-            self,
-            telegram_id: int,
-            chat_type: str,
-            title: Optional[str] = None,
+        self,
+        telegram_id: int,
+        chat_type: str,
+        title: Optional[str] = None,
     ) -> Chat:
         """
-        Привязывает новый чат к базе данных, если он ещё не существует.
+        Binds only one chat to the database. If there is already a bound chat, raises ChatAlreadyBoundError.
+        Race condition protection via transaction.
 
-        :param telegram_id: ID чата в Telegram
-        :param chat_type: Тип чата (private, group, supergroup, channel)
-        :param title: Название чата (если есть)
-        :return: Chat - созданный или существующий объект чата
+        :param telegram_id: Telegram chat ID
+        :param chat_type: Chat type (private, group, supergroup, channel)
+        :param title: Chat title (if any)
+        :return: Chat - created chat object
+        :raises ChatAlreadyBoundError: if a chat is already bound
         """
-        existing_chat = await self.get_chat_by_telegram_id(telegram_id=telegram_id)
-        if existing_chat:
-            return existing_chat
+        async with in_transaction():
+            already_exists = await Chat.exists()
+            if already_exists:
+                raise ChatAlreadyBoundError(
+                    '❌ В базе уже есть привязанный чат. Можно привязать только один.'
+                )
 
-        chat = await Chat.create(
-            telegram_id=telegram_id,
-            chat_type=chat_type,
-            title=title
-        )
-        return chat
-    
-    async def update_chat_telegram_id(
-            self,
-            chat_id: int,
-            new_telegram_id: int
-    ) -> Optional[Chat]:
-        """
-        Обновляет Telegram ID чата по его внутреннему ID.
+            chat = await Chat.create(
+                telegram_id=telegram_id,
+                chat_type=chat_type,
+                title=title
+            )
 
-        :param chat_id: Внутренний ID чата в базе данных
-        :param new_telegram_id: Новый ID чата в Telegram
-        :return: Optional[Chat] - обновленный объект чата или None, если чат не найден
-        """
-        chat = await Chat.filter(id=chat_id).first()
-        if not chat:
-            return None
-
-        chat.telegram_id = new_telegram_id
-        await chat.save()
-        return chat
+            return chat
 
     async def unbind_chat(
             self,
             telegram_id: int
     ) -> bool:
         """
-        Отвязывает чат от базы данных, удаляя его.
+        Unbinds a chat by its Telegram ID.
 
-        :param telegram_id: ID чата в Telegram
-        :return: bool - True, если чат был удален, False если чат не найден
+        :param telegram_id: Telegram ID of the chat
+        :return: bool - True if the chat was removed, False if not found
         """
         chat = await self.get_chat_by_telegram_id(telegram_id=telegram_id)
         if not chat:
@@ -88,11 +82,11 @@ class ChatService:
             thread_id: int
     ) -> bool:
         """
-        Устанавливает ID треда для чата.
+        Sets the thread ID for the chat.
 
-        :param telegram_id: ID чата в Telegram
-        :param thread_id: ID треда в чате
-        :return: bool - True, если тред был установлен, False если чат не найден
+        :param telegram_id: Telegram chat ID
+        :param thread_id: Thread ID in the chat
+        :return: bool - True if the thread was set, False if the chat was not found
         """
         chat = await self.get_chat_by_telegram_id(telegram_id=telegram_id)
         if not chat:
@@ -107,10 +101,10 @@ class ChatService:
             telegram_id: int
     ) -> bool:
         """
-        Удаляет ID треда для чата.
-        
-        :param telegram_id: ID чата в Telegram
-        :return: bool - True, если тред был удален, False если чат не найден
+        Deletes the thread ID for the chat.
+
+        :param telegram_id: Telegram chat ID
+        :return: bool - True if the thread was removed, False if not found
         """
         chat = await self.get_chat_by_telegram_id(telegram_id=telegram_id)
         if not chat:
