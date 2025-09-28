@@ -1,3 +1,6 @@
+"""
+Tortoise ORM configuration.
+"""
 from config import settings
 
 TORTOISE_ORM = {
