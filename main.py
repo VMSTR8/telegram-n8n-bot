@@ -11,37 +11,30 @@ from app.bot_telegram import init_database
 
 async def async_main() -> None:
     """
-    Асинхронная основная функция для инициализации и запуска бота.
+    Asynchronous main function to initialize and start the bot.
 
     :return: None
     """
     setup_logging()
-    
+
     logging.info('Запуск приложения в режиме development...')
 
     bot = BotManager()
-    
+
     await init_database()
     logging.info('База данных инициализирована')
-    
+
     await bot.ensure_creator_exists()
 
     await bot.start_polling()
 
+
 def main() -> None:
     """
-    Так! Это все пока пишется и разрабатывается.
-    Когда апишку напишу, то и тут нормальный main сделаю.
-    Нечего тут смотреть и читать докстринг этот.
-    Кыш отседа.
-    Иди свой проект делай.
-    Ну или не делай. Можешь и тут посидеть.
-    Зачем я пишу это все?
-    Да просто так.
-    Лишь бы мне не писать код. Ты же тоже тут,
-    потому что не хочешь писать код, а хочешь читать докстринги.
-    Вот и я так же.
-    Пойдем лучше код писать. (или нет)
+    Main function to run the asynchronous 
+    main function with error handling.
+
+    :return: None
     """
     try:
         run(async_main())
