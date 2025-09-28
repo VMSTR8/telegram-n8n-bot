@@ -6,10 +6,10 @@ from datetime import datetime
 
 class UserRole(str, Enum):
     """
-    Роли пользователей
-    - CREATOR: Создатель бота, имеет все права
-    - ADMIN: Администратор, имеет расширенные права
-    - USER: Обычный пользователь, имеет базовые права
+    User roles
+    - CREATOR: Bot creator, has all permissions
+    - ADMIN: Administrator, has extended permissions
+    - USER: Regular user, has basic permissions
     """
     CREATOR = 'creator'
     ADMIN = 'admin'
@@ -18,7 +18,7 @@ class UserRole(str, Enum):
 
 class UserSchema(BaseModel):
     """
-    Схема пользователя Telegram бота
+    User schema for the Telegram bot
     """
     id: int
     telegram_id: int
