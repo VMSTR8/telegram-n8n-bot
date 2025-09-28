@@ -15,7 +15,17 @@ aerich init-db || true
 
 # 2. Применение неприменённых миграций
 echo "Выполняется aerich migrate (применение неприменённых миграций)..."
-aerich migrate || true
+if ! aerich migrate; then
+	echo "[ERROR] Aerich migrate завершился с ошибкой. Проверьте миграции вручную (возможно, есть конфликтные или лишние файлы)."
+	exit 1
+fi
+
+# 2.1. Применение всех миграций (upgrade)
+echo "Выполняется aerich upgrade (применение всех миграций)..."
+if ! aerich upgrade; then
+	echo "[ERROR] Aerich upgrade завершился с ошибкой. Проверьте миграции вручную (возможно, есть конфликтные или лишние файлы)."
+	exit 1
+fi
 
 # 3. Запуск основного приложения
 echo "Запуск main.py..."
