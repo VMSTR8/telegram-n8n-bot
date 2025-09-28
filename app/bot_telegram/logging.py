@@ -5,12 +5,11 @@ from pathlib import Path
 
 def setup_logging() -> None:
     """
-    Настройка логирования с использованием стандартного logging.
+    Sets up logging configuration for the application.
     """
     logs_dir = Path('logs')
     logs_dir.mkdir(exist_ok=True)
 
-    # Форматы логов
     console_format = logging.Formatter(
         "%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
         "%Y-%m-%d %H:%M:%S"
