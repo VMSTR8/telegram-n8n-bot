@@ -3,25 +3,27 @@ from tortoise import fields
 
 
 class Penalty(Model):
-
+    """
+    Model representing a penalty point assigned to a user for not participating in surveys.
+    """
     id = fields.IntField(pk=True)
     user = fields.ForeignKeyField(
         'models.User',
         related_name='penalties',
-        description='Пользователь, которому назначен штрафной балл'
+        description='User to whom the penalty point is assigned'
     )
     survey = fields.ForeignKeyField(
         'models.Survey',
         related_name='penalties',
-        description='Опрос, за который назначен штрафной балл'
+        description='Survey for which the penalty point is assigned'
     )
-    reason = fields.TextField(description='Причина назначения штрафного балла')
-    penalty_date = fields.DatetimeField(auto_now_add=True, description='Дата и время назначения штрафного балла')
+    reason = fields.TextField(description='Reason for assigning the penalty point')
+    penalty_date = fields.DatetimeField(auto_now_add=True, description='Date and time of penalty point assignment')
 
     class Meta:
         table = 'penalties'
-        table_description = 'Штрафные баллы пользователей за неучастие в опросах'
+        table_description = 'User penalty points for not participating in surveys'
 
     def __str__(self) -> str:
-        """Строковое представление штрафного балла"""
+        """String representation of the penalty point"""
         return f'Penalty {self.id} for User {self.user} in Survey {self.survey}'
