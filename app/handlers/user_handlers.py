@@ -1,11 +1,13 @@
 import logging
+from datetime import datetime
 
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command, CommandStart
 
 from app.services import UserService, ChatService, SurveyService
-from app.decorators import validate_callsign_create, required_user_registration, required_chat_bind
+from app.decorators import CallsignDecorators as Callsign
+from app.decorators import AuthDecorators as Auth
 from config.settings import settings
 
 
@@ -19,6 +21,8 @@ class UserHandlers:
         self.user_service = UserService()
         self.chat_service = ChatService()
         self.survey_service = SurveyService()
+        self.tz = settings.timezone_zoneinfo
+        self._datetime_format = '%d.%m.%Y %H:%M'
         self._register_handlers()
 
     def _register_handlers(self) -> None:
@@ -70,24 +74,24 @@ class UserHandlers:
             '• `/reg позывной` - Регистрация в системе\n'
             '• `/update позывной` - Обновить позывной или данные профиля\n'
             '• `/profile` - Информация о профиле\n'
-            '• `/surveys` - Статус прохождения опросов\n'
+            '• `/surveys` - Список активных опросов\n'
             '• `/help` - Показать эту справку\n\n'
             '🔧 Администратор:\n'
+            '• `/reserve позывной` - Повесить или снять бронь на прохождение опросов '
+            'для конкретного пользователя\n'
+            '• `/create_survey название дата_окончания` - Создать опрос\n\n'
+            '👑 Создатель:\n'
             '• `/bind` - Привязать чат к бота\n'
             '• `/unbind` - Отвязать чат от бота\n'
             '• `/bind_thread` - Назначить тред для оповещений по опросам\n'
             '• `/unbind_thread` - Снять тред для оповещений по опросам\n'
-            '• `/reserve позывной` - Повесить или снять бронь на прохождение опросов '
-            'для конкретного пользователя\n\n'
-            '👑 Создатель:\n'
             '• `/add_admin позывной` - Добавить администратора\n'
             '• `/remove_admin позывной` - Убрать администратора\n'
-            '• `/admin_list` - Показать список администраторов\n'
-            '• `/create_survey название время_окончания` - Создать опрос\n'
+            '• `/admin_list` - Показать список администраторов'
         )
         await message.reply(text=help_text, parse_mode='Markdown')
 
-    @validate_callsign_create
+    @Callsign.validate_callsign_create
     async def register_command(self, message: Message, callsign: str) -> None:
         """
         Обработчик команды /reg. Регистрирует нового пользователя с указанным позывным.
@@ -109,9 +113,12 @@ class UserHandlers:
             user = await self.user_service.create_user(
                 telegram_id=message.from_user.id,
                 callsign=callsign.lower(),
-                first_name=message.from_user.first_name.lower(),
-                last_name=message.from_user.last_name.lower(),
-                username=message.from_user.username.lower()
+                first_name=(message.from_user.first_name.lower()
+                            if message.from_user.first_name else None),
+                last_name=(message.from_user.last_name.lower()
+                           if message.from_user.last_name else None),
+                username=(message.from_user.username.lower()
+                          if message.from_user.username else None)
             )
 
             await message.reply(
@@ -131,12 +138,48 @@ class UserHandlers:
             )
             logging.error(f'Ошибка при регистрации пользователя: {e}')
 
-    @required_user_registration
+    @Auth.required_user_registration
+    @Callsign.validate_callsign_update
     async def update_command(self, message: Message) -> None:
-        # TODO: Реализовать обновление профиля пользователя
-        pass
+        """
+        Обработчик команды /update. Обновляет позывной, если он передан
+        атрибутом вместе с командой. Или обновляет данные профиля,
+        если вызвана просто командой /update.
 
-    @required_user_registration
+        :param message: Message - входящее сообщение от пользователя
+        :return: None
+        """
+        try:
+            data = {}
+
+            user = await self.user_service.get_user_by_telegram_id(message.from_user.id)
+
+            data['first_name'] = (message.from_user.first_name.lower()
+                                  if message.from_user.first_name else None)
+            data['last_name'] = (message.from_user.last_name.lower()
+                                 if message.from_user.last_name else None)
+            data['username'] = (message.from_user.username.lower()
+                                if message.from_user.username else None)
+            data['updated_at'] = datetime.now(tz=self.tz)
+
+            args = message.text.split()
+
+            if len(args) >= 2:
+                data['callsign'] = args[1].lower()
+
+            await self.user_service.update_user(user.telegram_id, **data)
+
+            await message.reply('✅ Профиль успешно обновлён!')
+
+        except ValueError as e:
+            await message.reply(f'❌ Ошибка обновления профиля: {e}')
+        except Exception as e:
+            await message.reply(
+                '❌ Произошла ошибка при обновлении профиля. Пожалуйста, попробуйте позже.'
+            )
+            logging.error(f'Ошибка при обновлении профиля пользователя: {e}')
+
+    @Auth.required_user_registration
     async def profile_command(self, message: Message) -> None:
         """
         Обработчик команды /profile. Отправляет информацию о профиле пользователя.
@@ -146,8 +189,6 @@ class UserHandlers:
         """
         user = await self.user_service.get_user_by_telegram_id(message.from_user.id)
 
-        tz = settings.timezone_zoneinfo
-
         profile_text = (
             f'👤 *Профиль пользователя*\n\n'
             f'🆔 Позывной: `{user.callsign.capitalize()}`\n'
@@ -155,17 +196,17 @@ class UserHandlers:
             f'👥 Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
             f'🔗 Username: {f'@{user.username}' if user.username else 'Не указан'}\n'
             f'📅 Зарегистрирован: '
-            f'{user.created_at.astimezone(tz=tz).strftime('%d.%m.%Y %H:%M')}\n'
+            f'{user.created_at.astimezone(tz=self.tz).strftime(self._datetime_format)}\n'
             f'🔄 Профиль обновлён: '
-            f'{user.updated_at.astimezone(tz=tz).strftime('%d.%m.%Y %H:%M')}\n'
+            f'{user.updated_at.astimezone(tz=self.tz).strftime(self._datetime_format)}\n'
             f'🛡️ Бронь от опросов: {'Есть' if user.reserved else 'Нет'}\n'
             f'⚙️ Роль: {user.role.value.capitalize()}'
         )
 
         await message.reply(text=profile_text, parse_mode='Markdown')
 
-    @required_chat_bind
-    @required_user_registration
+    @Auth.required_chat_bind
+    @Auth.required_user_registration
     async def surveys_command(self, message: Message) -> None:
         """
         Обработчик команды /surveys. Отправляет список активных опросов
@@ -178,7 +219,7 @@ class UserHandlers:
 
         if not active_surveys:
             await message.reply(
-                text='В данный момент нет активных опросов\n¯\\_(ツ)_/¯',
+                text='В данный момент нет активных опросов.',
                 parse_mode='Markdown'
             )
             return
@@ -188,7 +229,9 @@ class UserHandlers:
             surveys_text += (
                 f'• *{survey.title}*\n'
                 f'  🔗 [Перейти к опросу]({survey.form_url})\n'
-                f'  🕒 Завершение: {survey.ended_at.strftime('%Y-%m-%d %H:%M:%S')}\n\n'
+                f'  🕒 Завершение: {survey.ended_at.astimezone(
+                    tz=self.tz
+                ).strftime(self._datetime_format)}\n\n'
             )
 
         await message.reply(text=surveys_text, parse_mode='Markdown')
