@@ -12,7 +12,7 @@ from app.models import UserRole
 
 class BotManager:
     """
-    Класс для управления ботом и диспетчером
+    Class to manage the Telegram bot and its dispatcher.
     """
     def __init__(self):
         self._bot: Optional[Bot] = None
@@ -22,9 +22,9 @@ class BotManager:
 
     def create_bot(self) -> Bot:
         """
-        Создает и возвращает экземпляр бота
+        Creates and returns an instance of the bot.
 
-        :return: Bot: Экземпляр бота
+        :return: Bot: Bot instance
         """
         if self.bot is None:
             self._bot = Bot(
@@ -37,9 +37,9 @@ class BotManager:
 
     def create_dispatcher(self) -> Dispatcher:
         """
-        Создает и возвращает экземпляр диспетчера
+        Creates and returns an instance of the dispatcher.
 
-        :return: Dispatcher: Экземпляр диспетчера
+        :return: Dispatcher: Dispatcher instance
         """
         if self._dispatcher is None:
             self._dispatcher = Dispatcher()
@@ -56,7 +56,7 @@ class BotManager:
     
     async def ensure_creator_exists(self) -> None:
         """
-        Проверяет и создает пользователя-создателя, если его нет
+        Creates the creator user if not already present in the database.
 
         :return: None
         """
@@ -74,24 +74,24 @@ class BotManager:
     @property
     def bot(self) -> Optional[Bot]:
         """
-        Возвращает экземпляр бота
+        Returns the bot instance.
 
-        :return: Bot: Экземпляр бота
+        :return: Bot: Bot instance
         """
         return self._bot
 
     @property
     def dispatcher(self) -> Optional[Dispatcher]:
         """
-        Возвращает экземпляр диспетчера
+        Returns the dispatcher instance.
 
-        :return: Dispatcher: Экземпляр диспетчера
+        :return: Dispatcher: Dispatcher instance
         """
         return self._dispatcher
 
     async def start_polling(self) -> None:
         """
-        Запускает бота в режиме polling
+        Starts the bot in polling mode.
 
         :return: None
         """
