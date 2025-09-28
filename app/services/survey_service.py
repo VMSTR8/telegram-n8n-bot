@@ -7,7 +7,7 @@ from config import settings
 
 class SurveyService:
     """
-    Сервис для работы с опросами Google Forms
+    Service for managing surveys.
     """
     def __init__(self):
         self.tz = settings.timezone_zoneinfo
@@ -21,14 +21,14 @@ class SurveyService:
             description: Optional[str] = None,
     ) -> Survey:
         """
-        Создает новый опрос.
+        Creates a new survey.
 
-        :param google_form_id: ID Google формы
-        :param title: Название опроса
-        :param form_url: URL Google формы
-        :param ended_at: Дата и время завершения опроса
-        :param description: Описание опроса
-        :return: Объект Survey
+        :param google_form_id: Google form ID
+        :param title: Survey title
+        :param form_url: Google form URL
+        :param ended_at: Date and time when the survey ends
+        :param description: Survey description (optional)
+        :return: Survey - created Survey object
         """
         pass
 
@@ -37,17 +37,17 @@ class SurveyService:
             google_form_id: str
     ) -> Optional[Survey]:
         """
-        Получает опрос по ID Google формы.
+        Gets a survey by its Google form ID.
 
-        :param google_form_id: ID Google формы
-        :return: Объект Survey или None, если не найден
+        :param google_form_id: Google form ID
+        :return: Optional[Survey] - Survey object or None if not found
         """
         return await Survey.filter(google_form_id=google_form_id).first()
 
     async def get_active_surveys(self) -> List[Survey]:
         """
-        Получает все активные опросы (не завершенные).
+        Gets all active surveys (not finished).
 
-        :return: Список объектов Survey
+        :return: List[Survey] - List of active surveys
         """
         return await Survey.filter(ended_at__gt=datetime.now(tz=self.tz)).all()
