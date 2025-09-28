@@ -7,6 +7,7 @@ class ChatService:
     """
     Сервис для управления чатами Telegram бота
     """
+    
     @staticmethod
     async def get_chat_by_telegram_id(
             telegram_id: int
@@ -19,35 +20,49 @@ class ChatService:
         """
         return await Chat.filter(telegram_id=telegram_id).first()
 
-    async def bind_or_update_bound_chat(
+    async def bind_chat(
             self,
             telegram_id: int,
             chat_type: str,
             title: Optional[str] = None,
     ) -> Chat:
         """
-        Привязывает чат к базе данных или обновляет его данные, если он уже привязан.
+        Привязывает новый чат к базе данных, если он ещё не существует.
 
         :param telegram_id: ID чата в Telegram
         :param chat_type: Тип чата (private, group, supergroup, channel)
         :param title: Название чата (если есть)
-        :return: Chat - объект чата
+        :return: Chat - созданный или существующий объект чата
         """
-        chat_exist = await self.get_chat_by_telegram_id(telegram_id=telegram_id)
-
-        if chat_exist:
-            chat_exist.chat_type = chat_type
-            chat_exist.title = title
-            await chat_exist.save()
-            
-            return chat_exist
+        existing_chat = await self.get_chat_by_telegram_id(telegram_id=telegram_id)
+        if existing_chat:
+            return existing_chat
 
         chat = await Chat.create(
             telegram_id=telegram_id,
             chat_type=chat_type,
             title=title
         )
+        return chat
+    
+    async def update_chat_telegram_id(
+            self,
+            chat_id: int,
+            new_telegram_id: int
+    ) -> Optional[Chat]:
+        """
+        Обновляет Telegram ID чата по его внутреннему ID.
 
+        :param chat_id: Внутренний ID чата в базе данных
+        :param new_telegram_id: Новый ID чата в Telegram
+        :return: Optional[Chat] - обновленный объект чата или None, если чат не найден
+        """
+        chat = await Chat.filter(id=chat_id).first()
+        if not chat:
+            return None
+
+        chat.telegram_id = new_telegram_id
+        await chat.save()
         return chat
 
     async def unbind_chat(
