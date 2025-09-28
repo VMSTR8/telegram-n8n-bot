@@ -4,23 +4,23 @@ from tortoise import fields
 
 class Chat(Model):
     """
-    Модель чата Telegram бота
+    Model representing a Telegram chat.
     """
     id = fields.IntField(pk=True)
-    telegram_id = fields.BigIntField(unique=True, description='ID чата в Telegram')
-    title = fields.CharField(max_length=255, null=True, description='Название чата')
-    chat_type = fields.CharField(max_length=50, description='Тип чата (private, group, supergroup, channel)')
-    thread_id = fields.BigIntField(null=True, description='ID треда в чате, если применимо')
+    telegram_id = fields.BigIntField(unique=True, description='Telegram ID чата')
+    title = fields.CharField(max_length=255, null=True, description='Chat title, if any')
+    chat_type = fields.CharField(max_length=50, description='Chat type (private, group, supergroup, channel)')
+    thread_id = fields.BigIntField(null=True, description='Thread ID in the chat, if applicable')
 
     class Meta:
         table = "chats"
-        table_description = "Таблица чатов Telegram бота"
+        table_description = "Table of Telegram bot chats"
 
     def __str__(self) -> str:
-        """Строковое представление чата"""
+        """String representation of the chat"""
         return f'Chat {self.telegram_id}: {self.title or "No Title"}'
 
     @property
     def is_thread_enabled(self) -> bool:
-        """Проверяет, является ли чат тредом (форумным чатом)"""
+        """Checks if the chat is a thread (forum chat)"""
         return self.thread_id is not None
