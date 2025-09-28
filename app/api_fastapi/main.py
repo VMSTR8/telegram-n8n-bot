@@ -14,10 +14,10 @@ from config import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
-    Контекстный менеджер для управления жизненным циклом приложения FastAPI.
+    Context manager for application lifespan events.
 
-    :param app: Экземпляр FastAPI приложения.
-    :return: AsyncGenerator[None, None] - асинхронный генератор.
+    :param app: FastAPI - FastAPI application instance
+    :return: AsyncGenerator[None, None] - asynchronous generator.
     """
     logging.info('Запуск приложения в режиме production...')
 
@@ -43,14 +43,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
-    ## TODO: Создать graceful shutdown для бота
+    # TODO: Implement graceful shutdown for the bot
 
 
 def create_app() -> FastAPI:
     """
-    Создает экземпляр FastAPI приложения.
+    Creates an instance of the FastAPI application.
 
-    :return: FastAPI - экземпляр приложения.
+    :return: FastAPI - FastAPI application instance.
     """
     app = FastAPI(
         title='Telegram Bot with n8n integration',
@@ -62,6 +62,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    ## TODO: Маршруты
+    # TODO: Add routes, middleware, exception handlers, etc.
 
     return app
