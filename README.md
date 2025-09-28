@@ -1,58 +1,59 @@
 # telegramBot_n8n
 
-> **Внимание:** проект находится в стадии активной разработки.
+> **Attention:** The project is under active development.
 
-## Описание
+## Description
 
-Этот репозиторий реализует Telegram-бота, интегрированного с автоматизациями n8n. Архитектура проекта построена с акцентом на модульность и удобство поддержки. Для API используется FastAPI, а логика бота, обработчики, модели и сервисы разделены по отдельным модулям.
+This repository implements a Telegram bot integrated with n8n automations. The project architecture is focused on modularity and maintainability. FastAPI is used for the API, and the bot logic, handlers, models, and services are separated into individual modules.
 
-## Стэк проекта
-- **Язык:** [Python 3.13+](https://www.python.org/)
-- **Фреймворк API:** [FastAPI](https://fastapi.tiangolo.com/)
+> **Note:** The chatbot is designed for Russian-speaking users. All documentation is in English, but the bot's functionality and interface are in Russian.
+
+## Project Stack
+- **Language:** [Python 3.13+](https://www.python.org/)
+- **API Framework:** [FastAPI](https://fastapi.tiangolo.com/)
 - **Telegram Bot:** [aiogram](https://docs.aiogram.dev/)
 - **ORM:** [Tortoise ORM](https://tortoise.github.io/toc.html)
-- **Миграции:** [Aerich](https://tortoise.github.io/migration.html?h=aerich#)
-- **Автоматизации:** [n8n](https://n8n.io/) (интеграция через сервисный слой)
-- **Контейнеризация:** [Docker](https://www.docker.com/), [docker-compose](https://docs.docker.com/compose/)
-- **Управление зависимостями:** [requirements.txt](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
-- **Конфигурация:** [pydantic-settings](https://docs.pydantic.dev/latest/integrations/pydantic_settings/), [.env](https://12factor.net/config)
-- **Логирование:** стандартный [logging](https://docs.python.org/3/library/logging.html) с ротацией файлов
-- **Управление командами:** [Makefile](https://www.gnu.org/software/make/manual/make.html)
+- **Migrations:** [Aerich](https://tortoise.github.io/migration.html?h=aerich#)
+- **Automations:** [n8n](https://n8n.io/) (integration via the service layer)
+- **Containerization:** [Docker](https://www.docker.com/), [docker-compose](https://docs.docker.com/compose/)
+- **Dependency Management:** [requirements.txt](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+- **Configuration:** [pydantic-settings](https://docs.pydantic.dev/latest/integrations/pydantic_settings/), [.env](https://12factor.net/config)
+- **Logging:** standard [logging](https://docs.python.org/3/library/logging.html) with file rotation
+- **Command Management:** [Makefile](https://www.gnu.org/software/make/manual/make.html)
 
+## Architecture and Main Components
 
-## Архитектура и основные компоненты
+- **main.py** — application entry point, initialization, and integration of all components.
+- **app/** — main application logic:
+    - `api_fastapi/` — FastAPI endpoints and related logic.
+    - `bot_telegram/` — Telegram bot implementation (`bot.py`), logging, and utilities.
+    - `handlers/` — bot command and message handlers.
+    - `models/` — data models (e.g., `user.py`).
+    - `services/` — business logic and integrations (n8n, external APIs).
+    - `utils/` — helper functions.
+    - `decorators/` — custom decorators (e.g., for authentication, logging).
+- **config/** — configuration management (`settings.py` for environment variables).
+- **Dockerfile** and **docker-compose.yml** — containerization and orchestration for development and deployment.
+- **requirements.txt** — Python dependencies.
 
-- **main.py** — точка входа в приложение, инициализация и интеграция всех компонентов.
-- **app/** — основная логика приложения:
-    - `api_fastapi/` — эндпоинты FastAPI и связанная логика.
-    - `bot_telegram/` — реализация Telegram-бота (`bot.py`), логирование и утилиты.
-    - `handlers/` — обработчики команд и сообщений бота.
-    - `models/` — модели данных (например, `user.py`).
-    - `services/` — бизнес-логика и интеграции (n8n, внешние API).
-    - `utils/` — вспомогательные функции.
-    - `decorators/` — кастомные декораторы (например, для аутентификации, логирования).
-- **config/** — управление конфигурацией (`settings.py` для переменных окружения).
-- **Dockerfile** и **docker-compose.yml** — контейнеризация и оркестрация для разработки и деплоя.
-- **requirements.txt** — зависимости Python.
+## Quick Start
 
-## Быстрый старт
-
-1. Создайте файл .env на основе примера env.example:
+1. Create a .env file based on the env.example template:
     ```sh
     make env
     ```
-2. Заполните необходимые переменные окружения в `.env`.
-3. Запустите проект при помощи Docker:
+2. Fill in the required environment variables in `.env`.
+3. Start the project using Docker:
     ```sh
     make dev-up
     ```
 
-> Справка со всеми доступными командами вызывается через команду **make help**
+> You can view all available commands using **make help**
 
-## Основные паттерны
+## Main Patterns
 
-- **Модульная структура:** каждый слой (API, бот, обработчики, сервисы) вынесен в отдельную директорию.
-- **Централизованная конфигурация:** все настройки и секреты — в `config/settings.py`.
-- **Логика бота:** в `app/bot_telegram/bot.py`, обработчики — в `app/handlers/`.
-- **Сервисный слой:** интеграции и бизнес-логика — в `app/services/`.
-- **Декораторы:** переиспользуемые декораторы — в `app/decorators/`.
+- **Modular structure:** each layer (API, bot, handlers, services) is placed in a separate directory.
+- **Centralized configuration:** all settings and secrets are in `config/settings.py`.
+- **Bot logic:** in `app/bot_telegram/bot.py`, handlers — in `app/handlers/`.
+- **Service layer:** integrations and business logic — in `app/services/`.
+- **Decorators:** reusable decorators — in `app/decorators/`.
