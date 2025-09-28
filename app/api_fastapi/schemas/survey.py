@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class SurveySchema(BaseModel):
     """
-    Схема Google формы опроса
+    Schema for survey data.
     """
     id: int
     google_form_id: str
@@ -13,7 +13,7 @@ class SurveySchema(BaseModel):
     form_url: str
     is_sent: bool
     created_at: datetime
-    ended_at: datetime | None = None
+    ended_at: datetime
 
     class Config:
         orm_mode = True
@@ -21,8 +21,8 @@ class SurveySchema(BaseModel):
             "example": {
                 "id": 1,
                 "google_form_id": "1FAIpQLSfD2...",
-                "title": "Опрос удовлетворенности",
-                "description": "Пожалуйста, заполните этот опрос.",
+                "title": "Survey on User Satisfaction",
+                "description": "Please fill out this survey.",
                 "form_url": "https://docs.google.com/forms/d/e/1FAIpQLSfD2.../viewform",
                 "is_sent": True,
                 "created_at": "2023-01-01T12:00:00",
