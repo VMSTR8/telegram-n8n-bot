@@ -1,32 +1,32 @@
 #!/bin/bash
 set -e
 
-# Установка часового пояса из переменной окружения
+# Set timezone if TZ variable is provided
 if [ -n "$TZ" ]; then
 	export TZ=$TZ
-	echo "Используется часовой пояс: $TZ"
+	echo "Using timezone: $TZ"
 else
-	echo "Переменная TZ не задана, используется системный часовой пояс"
+	echo "TZ variable is not set, using system timezone"
 fi
 
 # 1. Инициализация базы и миграций
-echo "Выполняется aerich init-db..."
+echo "Running aerich init-db..."
 aerich init-db || true
 
 # 2. Применение неприменённых миграций
-echo "Выполняется aerich migrate (применение неприменённых миграций)..."
+echo "Running aerich migrate..."
 if ! aerich migrate; then
-	echo "[ERROR] Aerich migrate завершился с ошибкой. Проверьте миграции вручную (возможно, есть конфликтные или лишние файлы)."
+	echo "[ERROR] Aerich migrate failed. Please check migrations manually (there may be conflicting or unnecessary files)."
 	exit 1
 fi
 
 # 2.1. Применение всех миграций (upgrade)
-echo "Выполняется aerich upgrade (применение всех миграций)..."
+echo "Running aerich upgrade..."
 if ! aerich upgrade; then
-	echo "[ERROR] Aerich upgrade завершился с ошибкой. Проверьте миграции вручную (возможно, есть конфликтные или лишние файлы)."
+	echo "[ERROR] Aerich upgrade failed. Please check migrations manually (there may be conflicting or unnecessary files)."
 	exit 1
 fi
 
 # 3. Запуск основного приложения
-echo "Запуск main.py..."
+echo "Starting main.py..."
 python main.py
