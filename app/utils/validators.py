@@ -24,12 +24,6 @@ def validate_callsign_format(callsign: str) -> ValidationResult:
             error_message="Позывной не может быть пустым."
         )
 
-    if len(callsign) < 1:
-        return ValidationResult(
-            is_valid=False,
-            error_message="Позывной должен содержать не менее 1 символа."
-        )
-
     if len(callsign) > 20:
         return ValidationResult(
             is_valid=False,
