@@ -6,7 +6,8 @@ import sys
 
 async def init_database() -> None:
     """
-    Инициализация подключения к базе данных с использованием Tortoise ORM.
+    Initializes the database connection using Tortoise ORM.
+
     :return: None
     """
     try:
@@ -24,7 +25,8 @@ async def init_database() -> None:
 
 async def close_database() -> None:
     """
-    Закрытие подключений к базе данных.
+    Closes the database connections
+    .
     :return: None
     """
     try:
