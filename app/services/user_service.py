@@ -7,25 +7,25 @@ from config.settings import settings
 
 class UserService:
     """
-    Сервис для управления пользователями.
+    Service for managing Telegram bot users.
     """
     @staticmethod
     async def get_user_by_telegram_id(telegram_id: int) -> Optional[User]:
         """
-        Получить пользователя по его Telegram ID.
+        Get user by their Telegram ID.
 
-        :param telegram_id: Telegram ID пользователя.
-        :return: User | None - объект пользователя или None, если пользователь не найден.
+        :param telegram_id: Telegram ID of the user.
+        :return: User | None - user object or None if not found.
         """
         return await User.filter(telegram_id=telegram_id).first()
 
     @staticmethod
     async def get_user_by_callsign(callsign: str) -> Optional[User]:
         """
-        Получить пользователя по его позывному.
+        Get user by their callsign.
 
-        :param callsign: Позывной пользователя.
-        :return: User | None - объект пользователя или None, если пользователь не найден.
+        :param callsign: Callsign of the user.
+        :return: User | None - user object or None if not found.
         """
         return await User.filter(callsign=callsign).first()
 
@@ -39,15 +39,15 @@ class UserService:
             username: Optional[str] = None,
     ) -> User:
         """
-        Создает нового пользователя.
+        Creates a new user.
 
-        :param telegram_id: ID пользователя в Telegram
-        :param callsign: Позывной пользователя
-        :param role: Роль пользователя (по умолчанию USER)
-        :param first_name: Имя пользователя (если есть)
-        :param last_name: Фамилия пользователя (если есть)
-        :param username: Никнейм пользователя в Telegram (если есть)
-        :return: Объект User
+        :param telegram_id: Telegram ID of the user
+        :param callsign: Callsign of the user
+        :param role: Role of the user (default is USER)
+        :param first_name: First name of the user (if available)
+        :param last_name: Last name of the user (if available)
+        :param username: Username of the user in Telegram (if available)
+        :return: User object
         """
 
         user = await User.create(
@@ -60,15 +60,15 @@ class UserService:
         )
 
         return user
-    
+
     @staticmethod
     async def update_user(user_telegram_id: int, **data) -> User:
         """
-        Обновляет данные пользователя.
+        Updates user information.
 
-        :param user_telegram_id: Telegram ID пользователя для обновления
-        :param data: Ключевые слова аргументы с данными для обновления
-        :return: Объект User после обновления
+        :param user_telegram_id: Telegram ID of the user to update
+        :param data: Keyword arguments with data to update
+        :return: User object after update
         """
         user = await User.get(telegram_id=user_telegram_id)
         for key, value in data.items():
@@ -82,11 +82,11 @@ class UserService:
             new_role: UserRole
     ) -> bool:
         """
-        Устанавливает роль пользователя.
+        Sets the user's role.
 
-        :param telegram_id: ID пользователя в Telegram
-        :param new_role: Новая роль пользователя (USER, ADMIN)
-        :return: bool - True, если роль успешно установлена, иначе False
+        :param telegram_id: Telegram ID of the user
+        :param new_role: New role of the user (USER, ADMIN)
+        :return: bool - True if the role was successfully set, otherwise False
         """
         user = await self.get_user_by_telegram_id(telegram_id=telegram_id)
         if not user:
@@ -103,18 +103,18 @@ class UserService:
             role: UserRole
     ) -> List[User]:
         """
-        Получает список активных пользователей по их роли.
+        Get a list of active users by their role.
 
-        :param role: Роль пользователя (USER, ADMIN)
-        :return: list[User] - Список пользователей с указанной ролью
+        :param role: Role of the user (USER, ADMIN)
+        :return: list[User] - List of users with the specified role
         """
         return await User.filter(role=role, active=True).all()
 
     @staticmethod
     async def get_users_without_reservation() -> List[User]:
         """
-        Получает список пользователей без бронирования.
-        
-        :return: list[User] - Список пользователей без бронирования
+        Get a list of users without reservations.
+
+        :return: list[User] - List of users without reservations
         """
         return await User.filter(reserved=False, active=True).all()
