@@ -16,10 +16,10 @@ async def init_database() -> None:
             modules={'models': ['app.models']}
         )
         await Tortoise.get_connection("default").execute_query("SELECT 1;")
-        logging.info("Подключение к базе данных успешно инициализировано.")
+        logging.info('Database connection check successful.')
 
     except Exception as e:
-        logging.error(f"Ошибка при инициализации базы данных: {e}")
+        logging.error(f'Error occurred during database initialization: {e}')
         sys.exit(1)
 
 
@@ -31,7 +31,7 @@ async def close_database() -> None:
     """
     try:
         await Tortoise.close_connections()
-        logging.info("Подключения к базе данных успешно закрыты.")
+        logging.info('Database connections closed successfully.')
     except Exception as e:
-        logging.error(f"Ошибка при закрытии подключений к базе данных: {e}")
+        logging.error(f'Error occurred while closing database connections: {e}')
         raise
