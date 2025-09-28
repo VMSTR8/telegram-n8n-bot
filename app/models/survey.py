@@ -14,7 +14,7 @@ class Survey(Model):
 
     is_sent = fields.BooleanField(default=False, description='Отправлен ли опрос пользователям')
     created_at = fields.DatetimeField(auto_now_add=True, description='Дата и время создания записи')
-    ended_at = fields.DatetimeField(null=True, description='Дата и время завершения опроса')
+    ended_at = fields.DatetimeField(description='Дата и время завершения опроса')
 
     class Meta:
         table = "surveys"
