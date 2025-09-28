@@ -117,10 +117,12 @@ class AdminHandlers:
             await message.reply('❌ Не удалось отвязать чат.\nВозможно, он уже был отвязан ранее.')
 
     @Auth.required_creator
+    @Auth.required_not_private_chat
     async def bind_thread_command(self, message: Message) -> None:
         pass
 
     @Auth.required_creator
+    @Auth.required_not_private_chat
     async def unbind_thread_command(self, message: Message) -> None:
         pass
 
