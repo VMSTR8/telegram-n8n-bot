@@ -98,46 +98,6 @@ class UserService:
 
         return True
 
-    async def set_user_reserved_status(
-            self,
-            telegram_id: int
-    ) -> bool:
-        """
-        Устанавливает или снимает бронь от опросов у пользователя.
-
-        :param telegram_id: ID пользователя в Telegram
-        :return: bool - True, если статус успешно установлен, иначе False
-        """
-        user = await self.get_user_by_telegram_id(telegram_id=telegram_id)
-        if not user:
-            return False
-
-        user.reserved = not user.reserved
-        user.updated_at = datetime.now(tz=settings.timezone_zoneinfo)
-        await user.save()
-
-        return True
-
-    async def set_user_active_status(
-            self,
-            telegram_id: int
-    ) -> bool:
-        """
-        Деактивирует или активирует пользователя.
-
-        :param telegram_id: ID пользователя в Telegram
-        :return: bool - True, если пользователь успешно деактивирован, иначе False
-        """
-        user = await self.get_user_by_telegram_id(telegram_id=telegram_id)
-        if not user:
-            return False
-
-        user.active = not user.active
-        user.updated_at = datetime.now(tz=settings.timezone_zoneinfo)
-        await user.save()
-
-        return True
-
     @staticmethod
     async def get_users_by_role(
             role: UserRole
