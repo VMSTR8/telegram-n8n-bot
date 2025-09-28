@@ -7,34 +7,34 @@ RED = \033[0;31m
 GREEN = \033[0;32m
 NC = \033[0m
 
-help: ## Показать справку по командам
+help: ## Show this help message
 	@echo "-------------------------------------"
-	@echo "${GREEN}telegramBot_n8n - Доступные команды:${NC}"
+	@echo "${GREEN}telegramBot_n8n - Available commands:${NC}"
 	@echo "-------------------------------------"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-env: ## Создание файла .env из env.example
+env: ## Create .env file from env.example
 	@if [ -f .env ]; then \
-		echo "${RED}.env файл уже существует!${NC}"; \
+		echo "${RED}.env file already exists!${NC}"; \
 	else \
-		echo "${GREEN}Создание .env файла из env.example${NC}"; \
+		echo "${GREEN}Creating .env file from env.example${NC}"; \
 		cp env.example .env; \
 	fi
 
-dev-up: ## Запуск в режиме разработки
+dev-up: ## Start development mode
 	docker compose --profile development up -d
 
-dev-down: ## Остановка режима разработки
+dev-down: ## Stop development mode
 	docker compose --profile development down
 
-dev-build: ## Сборка образов для разработки
+dev-build: ## Build images for development mode
 	docker compose --profile development build
 
-prod-up: ## Запуск в продакшн режиме
+up: ## Start production mode
 	docker compose --profile production up -d
 
-prod-down: ## Остановка продакшн режима
+down: ## Stop production mode
 	docker compose --profile production down
 
-prod-build: ## Сборка образов для продакшн режима
+build: ## Build images for production mode
 	docker compose --profile production build
