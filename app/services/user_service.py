@@ -60,62 +60,20 @@ class UserService:
         )
 
         return user
-
-    async def update_user_info_from_telegram(
-            self,
-            telegram_id: int,
-            new_first_name: Optional[str] = None,
-            new_last_name: Optional[str] = None,
-            new_username: Optional[str] = None,
-    ) -> Optional[User]:
-        """
-        Обновляет информацию о пользователе из данных Telegram.
-
-        :param telegram_id: ID пользователя в Telegram
-        :param new_first_name: Имя пользователя (если есть)
-        :param new_last_name: Фамилия пользователя (если есть)
-        :param new_username: Никнейм пользователя в Telegram (если есть)
-        :return: Объект User или None, если пользователь не найден
-        """
-        user = await self.get_user_by_telegram_id(telegram_id=telegram_id)
-        if not user:
-            return None
-
-        update_data = {}
-        if new_first_name is not None:
-            update_data['first_name'] = new_first_name
-        if new_last_name is not None:
-            update_data['last_name'] = new_last_name
-        if new_username is not None:
-            update_data['username'] = new_username
-
-        if update_data:
-            update_data['updated_at'] = datetime.now(tz=settings.timezone_zoneinfo)
-            await user.update_from_dict(update_data)
-            await user.save()
-
-        return user
     
-    async def update_user_callsign(
-            self,
-            telegram_id: int,
-            new_callsign: str
-    ) -> Optional[User]:
+    @staticmethod
+    async def update_user(user_telegram_id: int, **data) -> User:
         """
-        Обновляет позывной пользователя.
+        Обновляет данные пользователя.
 
-        :param telegram_id: ID пользователя в Telegram
-        :param new_callsign: Новый позывной пользователя
-        :return: Объект User или None, если пользователь не найден
+        :param user_telegram_id: Telegram ID пользователя для обновления
+        :param data: Ключевые слова аргументы с данными для обновления
+        :return: Объект User после обновления
         """
-        user = await self.get_user_by_telegram_id(telegram_id=telegram_id)
-        if not user:
-            return None
-
-        user.callsign = new_callsign
-        user.updated_at = datetime.now(tz=settings.timezone_zoneinfo)
+        user = await User.get(telegram_id=user_telegram_id)
+        for key, value in data.items():
+            setattr(user, key, value)
         await user.save()
-
         return user
 
     async def set_user_role(
