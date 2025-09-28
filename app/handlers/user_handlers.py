@@ -13,7 +13,7 @@ from config.settings import settings
 
 class UserHandlers:
     """
-    Класс для обработки пользовательских команд и сообщений.
+    Class to handle user-related commands and interactions.
     """
 
     def __init__(self):
@@ -27,7 +27,7 @@ class UserHandlers:
 
     def _register_handlers(self) -> None:
         """
-        Регистрирует обработчики команд в роутере.
+        Registers command handlers in the router.
 
         :return: None
         """
@@ -41,9 +41,9 @@ class UserHandlers:
     @staticmethod
     async def start_command(message: Message) -> None:
         """
-        Обработчик команды /start. Отправляет приветственное сообщение и инструкции по регистрации.
+        Command handler for /start. Sends a welcome message and instructions.
 
-        :param message: Message - входящее сообщение от пользователя
+        :param message: Message - incoming message from the user
         :return: None
         """
         start_text = (
@@ -63,9 +63,9 @@ class UserHandlers:
     @staticmethod
     async def help_command(message: Message) -> None:
         """
-        Обработчик команды /help. Отправляет список доступных команд и их описание.
+        Command handler for /help. Sends a list of available commands.
 
-        :param message: Message - входящее сообщение от пользователя
+        :param message: Message - incoming message from the user
         :return: None
         """
         help_text = (
@@ -77,27 +77,27 @@ class UserHandlers:
             '• `/surveys` - Список активных опросов\n'
             '• `/help` - Показать эту справку\n\n'
             '🔧 Администратор:\n'
-            '• `/reserve позывной` - Повесить или снять бронь на прохождение опросов '
-            'для конкретного пользователя\n'
-            '• `/create_survey название дата_окончания` - Создать опрос\n\n'
-            '👑 Создатель:\n'
-            '• `/bind` - Привязать чат к бота\n'
-            '• `/unbind` - Отвязать чат от бота\n'
+            '• `/bind` - Привязать чат к боту\n'
             '• `/bind_thread` - Назначить тред для оповещений по опросам\n'
             '• `/unbind_thread` - Снять тред для оповещений по опросам\n'
+            '• `/reserve позывной` - Повесить или снять бронь на прохождение опросов '
+            'для конкретного пользователя\n'
+            '• `/create_survey название дата_окончания` - Создать опрос\n'
+            '• `/admin_list` - Показать список администраторов\n\n'
+            '👑 Создатель:\n'
+            '• `/unbind` - Отвязать чат от бота\n'
             '• `/add_admin позывной` - Добавить администратора\n'
-            '• `/remove_admin позывной` - Убрать администратора\n'
-            '• `/admin_list` - Показать список администраторов'
+            '• `/remove_admin позывной` - Убрать администратора'
         )
         await message.reply(text=help_text, parse_mode='Markdown')
 
     @Callsign.validate_callsign_create
     async def register_command(self, message: Message, callsign: str) -> None:
         """
-        Обработчик команды /reg. Регистрирует нового пользователя с указанным позывным.
+        Command handler for /reg. Registers a new user with the provided callsign.
 
-        :param message: Message - входящее сообщение от пользователя
-        :param callsign: str - позывной пользователя
+        :param message: Message - incoming message from the user
+        :param callsign: str - user's callsign
         :return: None
         """
         try:
@@ -105,7 +105,7 @@ class UserHandlers:
             if user_exists:
                 await message.reply(
                     text=f'❌ Вы уже зарегистрированы в системе.\n\n'
-                         f'Ваш позывной: *{user_exists.callsign.capitalize()}*',
+                    f'Ваш позывной: *{user_exists.callsign.capitalize()}*',
                     parse_mode='Markdown'
                 )
                 return
@@ -123,10 +123,10 @@ class UserHandlers:
 
             await message.reply(
                 text=f'✅ Вы успешно зарегистрировались!\n'
-                     f'Позывной: {user.callsign.capitalize()}\n'
-                     f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
-                     f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
-                     f'Username: {f'@{user.username}' if user.username else 'username не указан'}',
+                f'Позывной: {user.callsign.capitalize()}\n'
+                f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
+                f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
+                f'Username: {f'@{user.username}' if user.username else 'username не указан'}',
                 parse_mode='Markdown'
             )
 
@@ -142,11 +142,10 @@ class UserHandlers:
     @Callsign.validate_callsign_update
     async def update_command(self, message: Message) -> None:
         """
-        Обработчик команды /update. Обновляет позывной, если он передан
-        атрибутом вместе с командой. Или обновляет данные профиля,
-        если вызвана просто командой /update.
+        Command handler for /update. Updates the user's profile information.
+        If a callsign is provided, updates it as well.
 
-        :param message: Message - входящее сообщение от пользователя
+        :param message: Message - incoming message from the user
         :return: None
         """
         try:
@@ -182,9 +181,9 @@ class UserHandlers:
     @Auth.required_user_registration
     async def profile_command(self, message: Message) -> None:
         """
-        Обработчик команды /profile. Отправляет информацию о профиле пользователя.
+        Command handler for /profile. Sends user profile information.
 
-        :param message: Message - входящее сообщение от пользователя
+        :param message: Message - incoming message from the user
         :return: None
         """
         user = await self.user_service.get_user_by_telegram_id(message.from_user.id)
@@ -209,10 +208,9 @@ class UserHandlers:
     @Auth.required_user_registration
     async def surveys_command(self, message: Message) -> None:
         """
-        Обработчик команды /surveys. Отправляет список активных опросов
-        с прикрепленными ссылками.
+        Command handler for /surveys. Sends a list of active surveys.
 
-        :param message: Message - входящее сообщение от пользователя
+        :param message: Message - incoming message from the user
         :return: None
         """
         active_surveys = await self.survey_service.get_active_surveys()
