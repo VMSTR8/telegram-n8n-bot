@@ -34,16 +34,20 @@ This repository implements a Telegram bot integrated with n8n automations. The p
     - `decorators/` — custom decorators (e.g., for authentication, logging).
 - **config/** — configuration management (`settings.py` for environment variables).
 - **Dockerfile** and **docker-compose.yml** — containerization and orchestration for development and deployment.
-- **requirements.txt** — Python dependencies.
-
 ## Quick Start
 
-1. Create a .env file based on the env.example template:
+1. Make sure you have [Docker](https://www.docker.com/get-started) installed on your machine.
+2. Clone the repository:
+    ```sh
+    git clone https://github.com/VMSTR8/telegramBot_n8n.git
+    cd telegramBot_n8n
+    ```
+3. Create a `.env` file based on the `env.example` template:
     ```sh
     make env
     ```
-2. Fill in the required environment variables in `.env`.
-3. Start the project using Docker:
+4. Fill in the required environment variables in `.env`.
+5. Start the project using Docker:
     ```sh
     make dev-up
     ```
