@@ -9,23 +9,25 @@ from config.settings import settings
 
 class PenaltyService:
     """
-    Сервис для работы со штрафными баллами пользователей
+    Service class for managing user penalties.
     """
     @staticmethod
     async def add_penalty(
             user: int,
             survey: int,
             reason: str,
-            penalty_date: datetime = datetime.now(tz=settings.timezone_zoneinfo),
+            penalty_date: datetime = datetime.now(
+                tz=settings.timezone_zoneinfo
+            ),
     ) -> Penalty:
         """
-        Добавляет новый штрафной балл пользователю.
+        Adds a new penalty point to the user.
 
-        :param user: id пользователя
-        :param survey: id опроса
-        :param reason: Причина назначения штрафного балла
-        :param penalty_date: Дата и время назначения штрафного балла (по умолчанию текущее время)
-        :return: Объект Penalty
+        :param user: User id
+        :param survey: Survey id
+        :param reason: Reason for the penalty
+        :param penalty_date: Date and time of the penalty (default: now)
+        :return: Penalty - The created penalty point
         """
         pass
 
@@ -34,10 +36,10 @@ class PenaltyService:
             user: User
     ) -> List[Penalty]:
         """
-        Получает все штрафные баллы пользователя.
+        Gets all penalty points of a user.
 
-        :param user: Пользователь (User)
-        :return: list[Penalty] - Список штрафных баллов пользователя
+        :param user: User (User)
+        :return: List[Penalty] - List of penalty points for the user
         """
         query = Penalty.filter(user=user)
         return await query.prefetch_related('survey').all()
@@ -47,19 +49,19 @@ class PenaltyService:
             user: User
     ) -> int:
         """
-        Получает количество штрафных баллов пользователя.
+        Gets the number of penalty points for a user.
 
-        :param user: Пользователь (User)
-        :return: int - Количество штрафных баллов пользователя
+        :param user: User (User)
+        :return: int - Number of penalty points for the user
         """
         return await Penalty.filter(user=user).count()
 
     @staticmethod
     async def get_all_users_with_three_penalties() -> List[Dict]:
         """
-        Получает всех пользователей, у которых 3 и более штрафных баллов.
+        Gets all users with 3 or more penalty points.
 
-        :return: list[Dict] - Список пользователей с количеством штрафных баллов
+        :return: List[Dict] - List of users with penalty points
         """
         users = await User.annotate(
             penalty_count=Count('penalties')
@@ -71,8 +73,8 @@ class PenaltyService:
     @staticmethod
     async def delete_all_penalties() -> None:
         """
-        Удаляет все штрафные баллы из базы данных.
-        
-        :return: None
+        Deletes all penalty points from the database.
+
+        :return: None - All penalty points are deleted
         """
         await Penalty.all().delete()
