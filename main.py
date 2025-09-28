@@ -17,12 +17,12 @@ async def async_main() -> None:
     """
     setup_logging()
 
-    logging.info('Запуск приложения в режиме development...')
+    logging.info('Starting application in development mode...')
 
     bot = BotManager()
 
     await init_database()
-    logging.info('База данных инициализирована')
+    logging.info('Database initialized successfully.')
 
     await bot.ensure_creator_exists()
 
@@ -39,7 +39,7 @@ def main() -> None:
     try:
         run(async_main())
     except Exception as e:
-        logging.error(f'Ошибка при запуске бота: {e}')
+        logging.error(f'Error occurred while starting the bot: {e}')
         sys.exit(1)
 
 
