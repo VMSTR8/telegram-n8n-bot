@@ -2,14 +2,15 @@ from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
 
-from app.services import UserService, ChatService, SurveyService
+from app.models import UserRole
+from app.services import UserService, ChatService, ChatAlreadyBoundError, SurveyService
 from app.decorators import AuthDecorators as Auth
 from config.settings import settings
 
 
 class AdminHandlers:
     """
-    Класс для обработки административных команд и сообщений.
+    Class to handle admin-related commands and interactions.
     """
 
     def __init__(self):
@@ -21,26 +22,33 @@ class AdminHandlers:
         self._register_handlers()
 
     def _register_handlers(self) -> None:
+        """
+        Registers command handlers in the router.
 
-        # Команды для администраторов
-        self.router.message(Command('reserve'))(self.reserve_user_command)
-        self.router.message(Command('create_survey'))(self.create_survey_command)
-
-        # Команды для создателя
+        :return: None
+        """
+        # Commands for admins
         self.router.message(Command('bind_chat'))(self.bind_chat_command)
-        self.router.message(Command('unbind_chat'))(self.unbind_chat_command)
         self.router.message(Command('bind_thread'))(self.bind_thread_command)
-        self.router.message(Command('unbind_thread'))(self.unbind_thread_command)
-        self.router.message(Command('add_admin'))(self.add_admin_command)
-        self.router.message(Command('remove_admin'))(self.remove_admin_command)
+        self.router.message(Command('unbind_thread'))(
+            self.unbind_thread_command
+        )
+        self.router.message(Command('reserve'))(self.reserve_command)
+        self.router.message(Command('create_survey'))(
+            self.create_survey_command)
         self.router.message(Command('admin_list'))(self.admin_list_command)
 
-    @Auth.required_admin
-    async def reserve_user_command(self, message: Message) -> None:
-        """
-        Переключает статус брони пользователя от опросов по его позывному.
+        # Commands for creators
+        self.router.message(Command('unbind_chat'))(self.unbind_chat_command)
+        self.router.message(Command('add_admin'))(self.add_admin_command)
+        self.router.message(Command('remove_admin'))(self.remove_admin_command)
 
-        :param message: Message - входящее сообщение от пользователя
+    @Auth.required_admin
+    async def reserve_command(self, message: Message) -> None:
+        """
+        Command handler for /reserve. Toggles the reservation status of a user by their callsign.
+
+        :param message: Message - incoming message from the user
         :return: None
         """
         args = message.text.split(maxsplit=1)
@@ -54,9 +62,9 @@ class AdminHandlers:
 
         callsign = args[1].strip()
         callsign = callsign.lower()
-        
+
         user = await self.user_service.get_user_by_callsign(callsign=callsign)
-        
+
         if not user:
             await message.reply(
                 text=f'❌ Пользователь с позывным `{callsign.capitalize()}` не найден.',
@@ -68,46 +76,45 @@ class AdminHandlers:
         await user.save()
         await message.reply(
             text=f'✅ Статус брони от опросов пользователя `{callsign.capitalize()}` изменён на: '
-                 f'{"Есть" if user.reserved else "Нет"}.',
+            f'{"Есть" if user.reserved else "Нет"}.',
             parse_mode='Markdown'
         )
 
     @Auth.required_admin
     async def create_survey_command(self, message: Message) -> None:
+        # TODO: Here comes the implementation of the create_survey_command
+        # TODO: It need to comunicate with Google API, so I'll do it later
         pass
 
-    @Auth.required_creator
+    @Auth.required_admin
     @Auth.required_not_private_chat
     async def bind_chat_command(self, message: Message) -> None:
         """
-        Привязывает чат к базе данных: если чат уже существует в базе, обновляет его Telegram ID, 
-        если нет — создает новую запись для чата.
+        Command handler for /bind_chat. Binds the current chat to the database.
+        Requires that no chat is already bound.
 
-        :param message: Сообщение с командой
+        :param message: Message - incoming message from the user
         :return: None
+        :raises ChatAlreadyBoundError: if trying to bind a chat when one is already bound
         """
-        chat_exists = await self.chat_service.get_chat_by_telegram_id(message.chat.id)
+        try:
+            await self.chat_service.bind_chat(
+                telegram_id=message.chat.id,
+                chat_type=message.chat.type,
+                title=message.chat.title or 'Без названия'
+            )
 
-        if chat_exists:
-            await message.reply('❌ Этот чат уже привязан к базе данных.')
-            return
-
-        await self.chat_service.bind_chat(
-            telegram_id=message.chat.id,
-            chat_type=message.chat.type,
-            title=message.chat.title or 'Без названия'
-        )
-
-        await message.reply('✅ Чат успешно привязан к базе данных.')
+            await message.reply('✅ Чат успешно привязан к базе данных.')
+        except ChatAlreadyBoundError as e:
+            await message.reply(f'Не удалось привязать чат:\n{e}')
 
     @Auth.required_creator
     @Auth.required_not_private_chat
     async def unbind_chat_command(self, message: Message) -> None:
         """
-        Отвязывает чат от базы данных: если чат не найден, сообщает об этом, иначе удаляет привязку.
-        Если чат уже был отвязан ранее, возвращает сообщение об ошибке.
+        Command handler for /unbind_chat. Unbinds the current chat from the database.
 
-        :param message: Сообщение с командой
+        :param message: Message - incoming message from the user
         :return: None
         """
         is_unbound = await self.chat_service.unbind_chat(telegram_id=message.chat.id)
@@ -116,24 +123,178 @@ class AdminHandlers:
         else:
             await message.reply('❌ Не удалось отвязать чат.\nВозможно, он уже был отвязан ранее.')
 
-    @Auth.required_creator
+    @Auth.required_admin
     @Auth.required_not_private_chat
     async def bind_thread_command(self, message: Message) -> None:
-        pass
+        """
+        Command handler for /bind_thread. Binds a thread in the current chat for survey notifications.
+        Chat must be already bound and the command must be called within a thread.
 
-    @Auth.required_creator
+        :param message: Message - incoming message from the user
+        :return: None
+        """
+        chat = await self.chat_service.get_chat_by_telegram_id(message.chat.id)
+        if not chat:
+            await message.reply('❌ Этот чат не привязан к боту.')
+            return
+
+        thread_id = message.message_thread_id
+        if not thread_id:
+            await message.reply(
+                '❌ Пожалуйста, вызовите эту команду в треде (ветке) чата, '
+                'который вы хотите назначить для оповещений по опросам.'
+            )
+            return
+
+        await self.chat_service.set_thread_id(
+            telegram_id=message.chat.id,
+            thread_id=thread_id
+        )
+
+        await message.reply('✅ Тред успешно назначен для оповещений по опросам.')
+
+    @Auth.required_admin
     @Auth.required_not_private_chat
     async def unbind_thread_command(self, message: Message) -> None:
-        pass
+        """
+        Command handler for /unbind_thread. Unbinds the thread in the current chat from survey notifications.
+
+        :param message: Message - incoming message from the user
+        :return: None
+        """
+        chat = await self.chat_service.get_chat_by_telegram_id(message.chat.id)
+        if not chat:
+            await message.reply('❌ Этот чат не привязан к боту.')
+            return
+
+        await self.chat_service.delete_thread_id(
+            telegram_id=message.chat.id
+        )
+
+        await message.reply('✅ Тред успешно отвязан от оповещений по опросам.')
 
     @Auth.required_creator
     async def add_admin_command(self, message: Message) -> None:
-        pass
+        """
+        Command handler for /add_admin. Grants admin role to a user by their callsign.
+
+        :param message: Message - incoming message from the user
+        :return: None
+        """
+        args = message.text.split(maxsplit=1)
+        if len(args) < 2 or not args[1].strip():
+            await message.reply(
+                text='❌ Пожалуйста, укажите позывной пользователя после команды.\n'
+                     'Пример: `/add_admin позывной`',
+                parse_mode='Markdown'
+            )
+            return
+
+        user = await self.user_service.get_user_by_callsign(args[1].strip().lower())
+        if not user:
+            await message.reply('❌ Пользователь не найден.')
+            return
+
+        if user.is_creator:
+            await message.reply('❌ Нельзя сделать создателя администратором.')
+            return
+
+        if user.is_admin:
+            await message.reply('❌ Пользователь уже является администратором.')
+            return
+
+        await self.user_service.set_user_role(
+            telegram_id=user.telegram_id,
+            new_role=UserRole.ADMIN
+        )
+
+        await message.reply(
+            text=f'✅ Пользователь `{user.callsign.capitalize()}` успешно добавлен в администраторы.',
+            parse_mode='Markdown'
+        )
 
     @Auth.required_creator
     async def remove_admin_command(self, message: Message) -> None:
-        pass
+        """
+        Command handler for /remove_admin. Revokes admin role from a user by their callsign.
 
-    @Auth.required_creator
+        :param message: Message - incoming message from the user
+        :return: None
+        """
+        args = message.text.split(maxsplit=1)
+        if len(args) < 2 or not args[1].strip():
+            await message.reply(
+                text='❌ Пожалуйста, укажите позывной пользователя после команды.\n'
+                     'Пример: `/remove_admin позывной`',
+                parse_mode='Markdown'
+            )
+            return
+
+        user = await self.user_service.get_user_by_callsign(args[1].strip().lower())
+        if not user:
+            await message.reply('❌ Пользователь не найден.')
+            return
+
+        if user.is_creator:
+            await message.reply('❌ Нельзя снять роль администратора с создателя.')
+            return
+
+        if not user.is_admin:
+            await message.reply('❌ Пользователь не является администратором.')
+            return
+
+        await self.user_service.set_user_role(
+            telegram_id=user.telegram_id,
+            new_role=UserRole.USER
+        )
+
+        await message.reply(
+            text=f'✅ Роль администратора у пользователя `{user.callsign.capitalize()}` успешно снята.',
+            parse_mode='Markdown'
+        )
+
+    @Auth.required_admin
     async def admin_list_command(self, message: Message) -> None:
-        pass
+        """
+        Command handler for /admin_list. Sends a list of all admins with their callsigns and usernames.
+
+        :param message: Message - incoming message from the user
+        :return: None
+        """
+        admin_list = await self.user_service.get_users_by_role(UserRole.ADMIN)
+
+        if not admin_list:
+            await message.reply('❌ Администраторы не назначены.')
+            return
+
+        admin_lines = []
+        for idx, admin in enumerate(admin_list, 1):
+            if admin.username:
+                line = f"{idx}. [{admin.callsign.capitalize()}](https://t.me/{admin.username})"
+            else:
+                line = f"{idx}. `{admin.callsign.capitalize()}`"
+            admin_lines.append(line)
+
+        MAX_MESSAGE_LENGTH = 4096
+        header = '👮‍♂️ *Список администраторов:*\n\n'
+        chunk = header
+        for line in admin_lines:
+            line_with_newline = line + '\n'
+            if len(chunk) + len(line_with_newline) > MAX_MESSAGE_LENGTH:
+                await message.reply(
+                    text=chunk.rstrip(),
+                    parse_mode='Markdown',
+                    disable_web_page_preview=True
+                )
+                chunk = ''
+            if not chunk:
+                chunk = line_with_newline
+            else:
+                chunk += line_with_newline
+
+        if chunk.strip():
+            await message.reply(
+                text=chunk.rstrip(),
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
