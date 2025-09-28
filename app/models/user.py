@@ -6,10 +6,10 @@ from tortoise import fields
 
 class UserRole(str, Enum):
     """
-    Роли пользователей
-    - CREATOR: Создатель бота, имеет все права
-    - ADMIN: Администратор, имеет расширенные права
-    - USER: Обычный пользователь, имеет базовые права
+    User roles
+    - CREATOR: Bot creator, has all permissions
+    - ADMIN: Administrator, has extended permissions
+    - USER: Regular user, has basic permissions
     """
     CREATOR = 'creator'
     ADMIN = 'admin'
@@ -18,43 +18,43 @@ class UserRole(str, Enum):
 
 class User(Model):
     """
-    Модель пользователя Telegram бота
+    Model representing a Telegram bot user.
     """
     id = fields.IntField(pk=True)
-    telegram_id = fields.BigIntField(unique=True, description='ID пользователя в Telegram')
+    telegram_id = fields.BigIntField(unique=True, description='Telegram ID of the user')
 
-    username = fields.CharField(max_length=255, null=True, description='Имя пользователя в Telegram')
-    first_name = fields.CharField(max_length=255, null=True, description='Имя пользователя')
-    last_name = fields.CharField(max_length=255, null=True, description='Фамилия пользователя')
+    username = fields.CharField(max_length=255, null=True, description='Username in Telegram')
+    first_name = fields.CharField(max_length=255, null=True, description='Name of the user')
+    last_name = fields.CharField(max_length=255, null=True, description='Last name of the user')
 
-    callsign = fields.CharField(max_length=20, unique=True, description='Позывной пользователя')
-    role = fields.CharEnumField(UserRole, default=UserRole.USER, description='Роль пользователя')
+    callsign = fields.CharField(max_length=20, unique=True, description='User callsign')
+    role = fields.CharEnumField(UserRole, default=UserRole.USER, description='User role')
 
-    active = fields.BooleanField(default=True, description='Активен ли пользователь')
-    created_at = fields.DatetimeField(auto_now_add=True, description='Дата и время создания записи')
-    updated_at = fields.DatetimeField(auto_now=True, description='Дата и время последнего обновления записи')
+    active = fields.BooleanField(default=True, description='Active status of the user')
+    created_at = fields.DatetimeField(auto_now_add=True, description='Date and time of record creation')
+    updated_at = fields.DatetimeField(auto_now=True, description='Date and time of last record update')
 
-    reserved = fields.BooleanField(default=False, description='Есть ли бронь от опросов у пользователя')
+    reserved = fields.BooleanField(default=False, description='Is there a reservation from surveys for the user')
 
     class Meta:
         table = "users"
-        table_description = "Таблица пользователей Telegram бота"
+        table_description = "Table of Telegram bot users"
 
     def __str__(self) -> str:
-        """Строковое представление пользователя """
+        """String representation of the user"""
         return f'User {self.telegram_id}: {self.role}'
 
     @property
     def is_creator(self) -> bool:
-        """Проверяет, является ли пользователь создателем бота"""
+        """Checks if the user is the bot creator"""
         return self.role == UserRole.CREATOR
 
     @property
     def is_admin(self) -> bool:
-        """Проверяет, является ли пользователь администратором"""
+        """Checks if the user is an administrator"""
         return self.role in [UserRole.ADMIN, UserRole.CREATOR]
 
     @property
     def is_reserved(self) -> bool:
-        """Проверяет, есть ли у пользователя бронь от опросов"""
+        """Checks if the user has a reservation from surveys"""
         return self.reserved
