@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 
 from config import settings
-from app.handlers import UserHandlers
+from app.handlers import UserHandlers, AdminHandlers
 from app.services import UserService
 from app.models import UserRole
 
@@ -45,8 +45,10 @@ class BotManager:
             self._dispatcher = Dispatcher()
 
             user_handlers = UserHandlers()
+            admin_handlers = AdminHandlers()
 
             self._dispatcher.include_router(user_handlers.router)
+            self._dispatcher.include_router(admin_handlers.router)
 
             logging.info('Диспетчер создан и обработчики зарегистрированы')
 
