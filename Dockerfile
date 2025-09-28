@@ -1,36 +1,36 @@
-# Используем официальный минимальный образ Python
+# Use an official Python runtime as a parent image
 FROM python:3.13-slim
 
-# Устанавливаем переменные окружения
+# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Устанавливаем рабочую директорию
+# Set working directory
 WORKDIR /app
 
-# Устанавливаем системные зависимости и очищаем кэш
+# Install system dependencies and clean up cache
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc && \
     rm -rf /var/lib/apt/lists/*
 
-# Копируем только файлы зависимостей для кэширования слоев
+# Copy only dependency files to cache layers
 COPY requirements.txt .
 
-# Устанавливаем Python зависимости
+# Install Python dependencies
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Копируем исходный код приложения
+# Copy application source code
 COPY . .
 
-# Создаем непривилегированного пользователя и назначаем права
+# Create a non-root user and switch to it
 RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app
 
 USER appuser
 
-# Открываем порт для FastAPI
+# Open port for FastAPI
 EXPOSE 8000
 
-# Запускаем через entrypoint-скрипт
+# Run the application using the entrypoint script
 CMD ["/bin/bash", "scripts/entrypoint.sh"]
