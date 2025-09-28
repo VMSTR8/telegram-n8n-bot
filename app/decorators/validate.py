@@ -6,26 +6,24 @@ from app.utils import validate_callsign_format
 
 class CallsignDecorators:
     """
-    Класс с декораторами для методов класса для валидации позывного.
-    Не работает с обычными функциями.
+    Class containing decorators for callsign validation.
+    Works with methods of classes, not regular functions.
     """
 
     @staticmethod
     def validate_callsign_create(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         """
-        Декоратор предназначен для методов класса, а не для обычных функций.
+        Decorator for validating callsign in the /reg command.
+        Checks that the callsign meets the requirements:
+        - Only Latin letters
+        - Length from 1 to 20 characters
+        - No digits, special characters, or spaces
+        - Callsign must be unique
+        If the callsign is invalid, sends an error message and does not call the main function
 
-        Декоратор для валидации позывного в команде /reg.
-        Проверяет, что позывной соответствует требованиям:
-        - Только латинские буквы
-        - Длина от 1 до 20 символов
-        - Без цифр, спец символов и пробелов
-        - Позывной должен быть уникальным
-        Если позывной невалиден, отправляет сообщение с ошибкой и не вызывает основную функцию.
-
-        :param func: Функция, которую декорируем
-        :return: Обернутая асинхронная функция с теми же аргументами
-        что и у исходной функции
+        :param func: Function to be decorated
+        :return: Wrapped asynchronous function with the same arguments 
+        as the original function
         """
         @wraps(func)
         async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> Any:
@@ -78,20 +76,17 @@ class CallsignDecorators:
     @staticmethod
     def validate_callsign_update(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         """
-        Декоратор предназначен для методов класса, а не для обычных функций.
+        Decorator for validating callsign in the /update command.
+        If a callsign is provided, checks that it meets the requirements:
+        - Only Latin letters
+        - Length from 1 to 20 characters
+        - No digits, special characters, or spaces
+        - Callsign must be unique
+        If the callsign is invalid, sends an error message and does not call the main function
 
-        Декоратор для валидации позывного в команде /update,
-        если позывной передан атрибутом вместе с командой.
-        Проверяет, что позывной соответствует требованиям:
-        - Только латинские буквы
-        - Длина от 1 до 20 символов
-        - Без цифр, спец символов и пробелов
-        - Позывной должен быть уникальным 
-        Если позывной невалиден, отправляет сообщение с ошибкой и не вызывает основную функцию.
-
-        :param func: Функция, которую декорируем
-        :return: Обернутая асинхронная функция с теми же аргументами
-        что и у исходной функции
+        :param func: Function to be decorated
+        :return: Wrapped asynchronous function with the same arguments 
+        as the original function
         """
         @wraps(func)
         async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> Any:
