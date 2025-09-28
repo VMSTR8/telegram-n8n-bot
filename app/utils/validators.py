@@ -1,12 +1,13 @@
 import re
 from dataclasses import dataclass
 from typing import Optional
+from app.services import UserService
 
 
 @dataclass
 class ValidationResult:
     """
-    Результат валидации.
+    Result of validation.
     """
     is_valid: bool
     error_message: Optional[str] = None
@@ -14,10 +15,13 @@ class ValidationResult:
 
 def validate_callsign_format(callsign: str) -> ValidationResult:
     """
-    Валидирует формат позывного.
-    :param callsign: Позывной для валидации.
-    :return: ValidationResult - результат валидации.
+    Validates the format of a callsign.
+
+    :param callsign: The callsign to validate.
+    :return: ValidationResult - result of validation.
     """
+    user_service = UserService()
+
     if not callsign:
         return ValidationResult(
             is_valid=False,
@@ -34,6 +38,12 @@ def validate_callsign_format(callsign: str) -> ValidationResult:
         return ValidationResult(
             is_valid=False,
             error_message="Позывной должен содержать только латинские буквы."
+        )
+
+    if user_service.get_user_by_callsign(callsign.lower()):
+        return ValidationResult(
+            is_valid=False,
+            error_message="Позывной уже занят. Пожалуйста, выберите другой."
         )
 
     return ValidationResult(is_valid=True)
