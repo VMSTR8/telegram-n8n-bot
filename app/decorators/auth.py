@@ -8,16 +8,17 @@ from app.services import UserService, ChatService
 
 class AuthDecorators:
     """
-    Класс с декораторами для проверки прав пользователя и регистрации.
+    Class containing decorators for authentication checks.
     """
 
     @staticmethod
     def required_creator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         """
-        Декоратор для проверки, является ли пользователь создателем бота.
-        Если пользователь не является создателем, отправляется сообщение об ошибке.
-        :param func: Функция-обработчик команды.
-        :return: Обёрнутая функция.
+        Decorator to check if the user is the bot creator.
+        If the user is not the creator, an error message is sent.
+
+        :param func: Function to be decorated.
+        :return: Wrapped asynchronous function with the same arguments as the original function.
         """
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
@@ -38,10 +39,11 @@ class AuthDecorators:
     @staticmethod
     def required_admin(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         """
-        Декоратор для проверки, является ли пользователь администратором или создателем бота.
-        Если пользователь не является администратором или создателем, отправляется сообщение об ошибке.
-        :param func: Функция-обработчик команды.
-        :return: Обёрнутая функция.
+        Decorator to check if the user is an administrator or the bot creator.
+        If the user is not an admin or creator, an error message is sent.
+
+        :param func: Function to be decorated.
+        :return: Wrapped asynchronous function with the same arguments as the original function.
         """
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
@@ -62,10 +64,11 @@ class AuthDecorators:
     @staticmethod
     def required_user_registration(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         """
-        Декоратор для проверки, зарегистрирован ли пользователь в системе.
-        Если пользователь не зарегистрирован, отправляется сообщение с инструкцией по регистрации.
-        :param func: Функция-обработчик команды.
-        :return: Обёрнутая функция.
+        Decorator to check if the user is registered in the system.
+        If the user is not registered, an error message is sent.
+
+        :param func: Function to be decorated.
+        :return: Wrapped asynchronous function with the same arguments as the original function.
         """
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
@@ -87,11 +90,11 @@ class AuthDecorators:
     @staticmethod
     def required_chat_bind(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         """
-        Декоратор для проверки, выполняется ли команда исключительно в
-        привязанном к боту чате.
+        Decorator to check if the command is executed in a chat that is bound to the bot.
+        If the chat is not bound, an error message is sent.
 
-        :param func: Функция-обработчик команды.
-        :return: Обёрнутая функция.
+        :param func: Function to be decorated.
+        :return: Wrapped asynchronous function with the same arguments as the original function.
         """
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
@@ -99,7 +102,7 @@ class AuthDecorators:
             chat_exists = await chat_service.get_chat_by_telegram_id(message.chat.id)
             if not chat_exists:
                 await message.reply(
-                    '❌ Данную команду можно использовать только ' 
+                    '❌ Данную команду можно использовать только '
                     'в привязанном к боту чате.'
                 )
                 return
@@ -107,14 +110,14 @@ class AuthDecorators:
             return await func(self, message, *args, **kwargs)
 
         return wrapper
-    
+
     @staticmethod
     def required_not_private_chat(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         """
-        Декоратор для проверки, что команда выполняется не в приватном чате.
+        Decorator to check if the command is executed in a chat that is not private.
 
-        :param func: Функция-обработчик команды.
-        :return: Обёрнутая функция.
+        :param func: Function to be decorated.
+        :return: Wrapped asynchronous function with the same arguments as the original function.
         """
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
