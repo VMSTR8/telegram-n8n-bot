@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class PenaltySchema(BaseModel):
     """
-    Схема для штрафов пользователей за неучастие в опросах.
+    Schema for representing a penalty assigned to a user for survey-related infractions.
     """
     id: int
     user: int
@@ -19,7 +19,7 @@ class PenaltySchema(BaseModel):
                 "id": 1,
                 "user": 123,
                 "survey": 456,
-                "reason": "Неучастие в опросе",
+                "reason": "Late submission",
                 "penalty_date": "2023-10-01T12:34:56"
             }
         }
