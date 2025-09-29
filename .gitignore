@@ -116,4 +116,7 @@ n8n_data/
 # Migrations
 migrations/
 
+# Letsencrypt
+Letsencrypt/
+
 # End of file
