@@ -54,7 +54,7 @@ class CallsignDecorators:
             
             callsign = command_parts[1].strip()
 
-            validation_result = validate_callsign_format(callsign)
+            validation_result = await validate_callsign_format(callsign)
             if not validation_result.is_valid:
                 await message.reply(
                     text=f'❌ Неверный формат позывного.\n\n'
@@ -105,7 +105,7 @@ class CallsignDecorators:
                 
                 callsign = command_parts[1].strip()
 
-                validation_result = validate_callsign_format(callsign)
+                validation_result = await validate_callsign_format(callsign)
 
                 if not validation_result.is_valid:
                     await message.reply(
