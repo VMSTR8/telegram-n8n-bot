@@ -9,24 +9,29 @@ else
 	echo "TZ variable is not set, using system timezone"
 fi
 
-# 1. Инициализация базы и миграций
+# 1. Initialization of the database (if not initialized)
 echo "Running aerich init-db..."
 aerich init-db || true
 
-# 2. Применение неприменённых миграций
+# 2. Applying unapplied migrations
 echo "Running aerich migrate..."
 if ! aerich migrate; then
 	echo "[ERROR] Aerich migrate failed. Please check migrations manually (there may be conflicting or unnecessary files)."
 	exit 1
 fi
 
-# 2.1. Применение всех миграций (upgrade)
+# 2.1. Applying all migrations (upgrade)
 echo "Running aerich upgrade..."
 if ! aerich upgrade; then
 	echo "[ERROR] Aerich upgrade failed. Please check migrations manually (there may be conflicting or unnecessary files)."
 	exit 1
 fi
 
-# 3. Запуск основного приложения
-echo "Starting main.py..."
-python main.py
+# 3. Running main app in polling or webhook mode based on POLLING_MODE variable
+if [ "$POLLING_MODE" = "True" ]; then
+	echo "Running main.py in polling mode..."
+	python main.py
+else
+	echo "Running main.py in webhook mode..."
+	python main.py webhook
+fi
