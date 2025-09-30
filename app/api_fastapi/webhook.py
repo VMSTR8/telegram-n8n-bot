@@ -3,7 +3,6 @@ from typing import Dict, Any
 
 from aiogram.types import Update
 from fastapi import APIRouter, Request, HTTPException, Header
-from fastapi.responses import JSONResponse
 
 from app.bot_telegram import BotManager
 from config import settings
@@ -88,10 +87,9 @@ async def telegram_webhook(
 
     except Exception as e:
         logging.error(f'Unexpected error in webhook endpoint: {e}')
-        return JSONResponse(
-            status_code=500, 
-            content={'status': 'error', 'message': 'Internal Server Error'}
-            )
+        raise HTTPException(
+            status_code=500, detail='Internal Server Error'
+        )
 
 
 @webhook_router.get(path='/webhook/health', response_model=Dict[str, str])
