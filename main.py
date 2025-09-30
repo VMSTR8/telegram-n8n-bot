@@ -2,6 +2,8 @@ import logging
 from asyncio import run
 import sys
 
+import uvicorn
+
 from app.bot_telegram import (
     BotManager,
     setup_logging
@@ -9,11 +11,11 @@ from app.bot_telegram import (
 from app.bot_telegram import init_database
 
 
-async def async_main() -> None:
+async def main() -> None:
     """
-    Asynchronous main function to initialize and start the bot.
+    Asynchronous main function to initialize the bot, database,
 
-    :return: None
+    :return: None - starts the bot polling
     """
     setup_logging()
 
@@ -29,19 +31,39 @@ async def async_main() -> None:
     await bot.start_polling()
 
 
-def main() -> None:
+def run_webhook_mode() -> None:
     """
-    Main function to run the asynchronous 
-    main function with error handling.
+    Function to run the application in webhook mode using Uvicorn.
 
-    :return: None
+    :return: None - runs the Uvicorn server
+    """
+    setup_logging()
+    logging.info('Starting application in webhook mode...')
+
+    uvicorn.run(
+        app='app.api_fastapi:app',
+        host='0.0.0.0',
+        port=8000,
+        reload=False,
+        log_level='info'
+    )
+
+
+def run_polling_mode() -> None:
+    """
+    Function to run the bot in polling mode.
+
+    :return: None - starts the bot polling
     """
     try:
-        run(async_main())
+        run(main())
     except Exception as e:
         logging.error(f'Error occurred while starting the bot: {e}')
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == 'webhook':
+        run_webhook_mode()
+    else:
+        run_polling_mode()
