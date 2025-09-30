@@ -8,6 +8,7 @@ from app.bot_telegram import (
     close_database,
     BotManager
 )
+from .webhook import webhook_router
 from config import settings
 
 
@@ -29,7 +30,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         raise
 
     try:
-        bot = BotManager().create_bot()
+        bot_manager = BotManager()
+        await bot_manager.ensure_creator_exists()
+        bot = bot_manager.create_bot()
         webhook_url = f'{settings.telegram.webhook_url}/webhook'
         await bot.set_webhook(
             url=webhook_url,
@@ -39,11 +42,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logging.error(f'Error occurred while setting webhook: {e}')
 
-    logging.info('Application started successfully.')
+    logging.info('Application started successfully in webhook mode.')
 
     yield
 
-    # TODO: Implement graceful shutdown for the bot
+    #Shutdown
+    try:
+        bot_manager = BotManager()
+        if bot_manager.bot:
+            await bot_manager.bot.delete_webhook(drop_pending_updates=True)
+            await bot_manager.bot.session.close()
+            logging.info('Webhook deleted and bot session closed.')
+        
+        await close_database()
+        logging.info('Database connection closed successfully.')
+    
+    except Exception as e:
+        logging.error(f'Error occurred during shutdown: {e}')
 
 
 def create_app() -> FastAPI:
@@ -62,6 +77,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    # TODO: Add routes, middleware, exception handlers, etc.
+    app.include_router(webhook_router, tags=['webhook'])
 
     return app
+
+app = create_app()
