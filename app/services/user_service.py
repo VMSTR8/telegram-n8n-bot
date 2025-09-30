@@ -1,5 +1,5 @@
-from typing import Optional, List
 from datetime import datetime
+from typing import Optional, List
 
 from app.models import User, UserRole
 from config.settings import settings
@@ -9,6 +9,7 @@ class UserService:
     """
     Service for managing Telegram bot users.
     """
+
     @staticmethod
     async def get_user_by_telegram_id(telegram_id: int) -> Optional[User]:
         """
@@ -93,6 +94,24 @@ class UserService:
             return False
 
         user.role = new_role
+        user.updated_at = datetime.now(tz=settings.timezone_zoneinfo)
+        await user.save()
+
+        return True
+
+    @staticmethod
+    async def deactivate_user(telegram_id: int) -> bool:
+        """
+        Deactivates a user.
+
+        :param telegram_id: Telegram ID of the user to deactivate
+        :return: bool - True if the user was successfully deactivated, otherwise False
+        """
+        user = await User.filter(telegram_id=telegram_id, active=True).first()
+        if not user:
+            return False
+
+        user.active = False
         user.updated_at = datetime.now(tz=settings.timezone_zoneinfo)
         await user.save()
 
