@@ -28,6 +28,7 @@ class DatabaseSettings(BaseSettings):
 class AppSettings(BaseSettings):
     """Main application settings"""
     timezone: str = Field(default='Europe/Moscow', description='Application timezone', exclude=True)
+    polling_mode: bool = Field(default=True, description='Enable polling mode instead of webhook')
     telegram: TelegramBotSettings = Field(default_factory=TelegramBotSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
 
