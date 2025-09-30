@@ -1,5 +1,5 @@
-from typing import Optional, List
 from datetime import datetime
+from typing import Optional, List
 
 from app.models import Survey
 from config import settings
@@ -9,6 +9,7 @@ class SurveyService:
     """
     Service for managing surveys.
     """
+
     def __init__(self):
         self.tz = settings.timezone_zoneinfo
 
