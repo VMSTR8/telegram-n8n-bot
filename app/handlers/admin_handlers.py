@@ -1,10 +1,10 @@
 from aiogram import Router
-from aiogram.types import Message
 from aiogram.filters import Command
+from aiogram.types import Message
 
+from app.decorators import AuthDecorators as Auth
 from app.models import UserRole
 from app.services import UserService, ChatService, ChatAlreadyBoundError, SurveyService
-from app.decorators import AuthDecorators as Auth
 from config.settings import settings
 
 
@@ -35,7 +35,8 @@ class AdminHandlers:
         )
         self.router.message(Command('reserve'))(self.reserve_command)
         self.router.message(Command('create_survey'))(
-            self.create_survey_command)
+            self.create_survey_command
+        )
         self.router.message(Command('admin_list'))(self.admin_list_command)
 
         # Commands for creators
@@ -76,14 +77,14 @@ class AdminHandlers:
         await user.save()
         await message.reply(
             text=f'✅ Статус брони от опросов пользователя `{callsign.capitalize()}` изменён на: '
-            f'{"Есть" if user.reserved else "Нет"}.',
+                 f'{"Есть" if user.reserved else "Нет"}.',
             parse_mode='Markdown'
         )
 
     @Auth.required_admin
     async def create_survey_command(self, message: Message) -> None:
         # TODO: Here comes the implementation of the create_survey_command
-        # TODO: It need to comunicate with Google API, so I'll do it later
+        # TODO: It need to communicate with Google API, so I'll do it later
         pass
 
     @Auth.required_admin
