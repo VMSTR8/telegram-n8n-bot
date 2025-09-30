@@ -30,7 +30,7 @@ def setup_logging() -> None:
     file_handler = logging.handlers.TimedRotatingFileHandler(
         logs_dir / 'telegram_bot.log', when='midnight', backupCount=30, encoding='utf-8'
     )
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(file_format)
     root_logger.addHandler(file_handler)
 
@@ -40,5 +40,9 @@ def setup_logging() -> None:
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(file_format)
     root_logger.addHandler(error_handler)
+
+    aiogram_events_logger = logging.getLogger('aiogram')
+    aiogram_events_logger.setLevel(logging.WARNING)
+    root_logger.addHandler(aiogram_events_logger)
 
     logging.info('Logging is set up.')
