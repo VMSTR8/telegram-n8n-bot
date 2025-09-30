@@ -26,15 +26,19 @@ class DatabaseSettings(BaseSettings):
 
 class RabbitMQSettings(BaseSettings):
     """Settings for RabbitMQ connection"""
-    host: str = Field(default='localhost', description='RabbitMQ host')
-    port: int = Field(default=5672, description='RabbitMQ port')
-    user: str = Field(default='admin', description='RabbitMQ user')
-    password: str = Field(default='definitelynotanadminpassword', description='RabbitMQ password')
-    vhost: str = Field(default='/telegram_bot', description='RabbitMQ virtual host')
+    rmq_host: str = Field(default='localhost', description='RabbitMQ host')
+    rmq_port: int = Field(default=5672, description='RabbitMQ port')
+    rmq_user: str = Field(default='admin', description='RabbitMQ user')
+    rmq_password: str = Field(default='definitelynotanadminpassword', description='RabbitMQ password')
+    rmq_vhost: str = Field(default='/telegram_bot', description='RabbitMQ virtual host')
 
     @property
     def url(self) -> str:
-        return f'amqp://{self.user}:{self.password}@{self.host}:{self.port}{self.vhost}'
+        return (
+            f"amqp://{self.rmq_user}:{self.rmq_password}"
+            f"@{self.rmq_host}:{self.rmq_port}"
+            f"{self.rmq_vhost}"
+        )
 
 
 class AppSettings(BaseSettings):
