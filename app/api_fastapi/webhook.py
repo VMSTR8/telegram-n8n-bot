@@ -3,6 +3,7 @@ from typing import Dict, Any
 
 from aiogram.types import Update
 from fastapi import APIRouter, Request, HTTPException, Header
+from fastapi.responses import JSONResponse
 
 from app.bot_telegram import BotManager
 from config import settings
@@ -29,14 +30,14 @@ class WebhookHandler:
         :return: True if the secret is valid, False otherwise
         """
         if not self.webhook_secret or not secret_header:
-            logging.warning('Verifying webhook secret failed.')
+            logging.error('Verifying webhook secret failed.')
             return False
 
         normalized_header = str(secret_header).strip()
         normalized_secret = str(self.webhook_secret).strip()
 
         if len(normalized_header) < 1 or len(normalized_secret) < 1:
-            logging.warning('Verifying webhook secret failed due to empty values.')
+            logging.error('Verifying webhook secret failed due to empty values.')
             return False
 
         return normalized_secret == normalized_header
@@ -87,7 +88,10 @@ async def telegram_webhook(
 
     except Exception as e:
         logging.error(f'Unexpected error in webhook endpoint: {e}')
-        raise HTTPException(status_code=500, detail='Internal Server Error')
+        return JSONResponse(
+            status_code=500, 
+            content={'status': 'error', 'message': 'Internal Server Error'}
+            )
 
 
 @webhook_router.get(path='/webhook/health', response_model=Dict[str, str])
