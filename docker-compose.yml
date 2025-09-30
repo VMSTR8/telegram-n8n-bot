@@ -60,9 +60,9 @@ services:
   #   image: rabbitmq:3.13-management
   #   container_name: rabbitmq
   #   environment:
-  #     RABBITMQ_USER: ${RABBITMQ_USER}
-  #     RABBITMQ_PASS: ${RABBITMQ_PASS}
-  #     RABBITMQ_VHOST: ${RABBITMQ_VHOST}
+  #     RABBITMQ_USER: ${RMQ_USER}
+  #     RABBITMQ_PASS: ${RMQ_PASSWORD}
+  #     RABBITMQ_VHOST: ${RMQ_VHOST}
   #   ports:
   #     - "5672:5672"
   #     - "15672:15672"
@@ -87,7 +87,7 @@ services:
   #   depends_on:
   #     - rabbitmq
   #   environment:
-  #     - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/${RABBITMQ_VHOST}
+  #     - CELERY_BROKER_URL=amqp://${RMQ_USER}:${RMQ_PASSWORD}@${RMQ_HOST}:${RMQ_PORT}/${RMQ_VHOST}
   #     - CELERY_RESULT_BACKEND=rpc://
   #   profiles: [ production ]
   #   restart: unless-stopped
