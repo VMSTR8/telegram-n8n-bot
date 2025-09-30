@@ -13,7 +13,7 @@ class ValidationResult:
     error_message: Optional[str] = None
 
 
-def validate_callsign_format(callsign: str) -> ValidationResult:
+async def validate_callsign_format(callsign: str) -> ValidationResult:
     """
     Validates the format of a callsign.
 
@@ -40,7 +40,7 @@ def validate_callsign_format(callsign: str) -> ValidationResult:
             error_message="Позывной должен содержать только латинские буквы."
         )
 
-    if user_service.get_user_by_callsign(callsign.lower()):
+    if await user_service.get_user_by_callsign(callsign.lower()):
         return ValidationResult(
             is_valid=False,
             error_message="Позывной уже занят. Пожалуйста, выберите другой."
