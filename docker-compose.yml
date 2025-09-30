@@ -56,6 +56,91 @@ services:
     networks:
       - traefik-network
 
+  # rabbitmq:
+  #   image: rabbitmq:3.13-management
+  #   container_name: rabbitmq
+  #   environment:
+  #     RABBITMQ_USER: ${RABBITMQ_USER}
+  #     RABBITMQ_PASS: ${RABBITMQ_PASS}
+  #     RABBITMQ_VHOST: ${RABBITMQ_VHOST}
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"
+  #   volumes:
+  #     - rabbitmq_data:/var/lib/rabbitmq
+  #     - ./app/messaging/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+  #     - ./app/messaging/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+  #   healthcheck:
+  #     test: ["CMD", "rabbitmq-diagnostics", "ping"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #   profiles: [ production ]
+  #   restart: unless-stopped
+  #   networks:
+  #     - traefik-network
+  
+  # celery_worker:
+  #   build: .
+  #   container_name: celery_worker
+  #   command: celery -A app.celery_tasks worker --loglevel=info
+  #   depends_on:
+  #     - rabbitmq
+  #   environment:
+  #     - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/${RABBITMQ_VHOST}
+  #     - CELERY_RESULT_BACKEND=rpc://
+  #   profiles: [ production ]
+  #   restart: unless-stopped
+  #   networks:
+  #     - traefik-network
+
+  api:
+    build: .
+    container_name: telegramBotAPI
+    environment:
+      - TELEGRAM__BOT_TOKEN=${TELEGRAM__BOT_TOKEN}
+      - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
+      - TELEGRAM__WEBHOOK_URL=${TELEGRAM__WEBHOOK_URL}
+      - TELEGRAM__WEBHOOK_SECRET=${TELEGRAM__WEBHOOK_SECRET}
+      - DATABASE__HOST=${DATABASE__HOST}
+      - DATABASE__PORT=${DATABASE__PORT}
+      - DATABASE__USER=${DATABASE__USER}
+      - DATABASE__PASSWORD=${DATABASE__PASSWORD}
+      - DATABASE__BASENAME=${DATABASE__BASENAME}
+      - TZ=${TIMEZONE}
+      - POLLING_MODE=${POLLING_MODE} # False for webhook mode, True for polling mode
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_VHOST=${RABBITMQ_DEFAULT_VHOST}
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      traefik:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./migrations:/app/migrations
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.telegram-bot.rule=Host(`${WEBHOOK_DOMAIN}`)"
+      - "traefik.http.routers.telegram-bot.entrypoints=websecure"
+      - "traefik.http.routers.telegram-bot.tls=true"
+      - "traefik.http.routers.telegram-bot.tls.certresolver=myresolver"
+      - "traefik.http.services.telegram-bot.loadbalancer.server.port=8000"
+      - "traefik.http.routers.telegram-bot.middlewares=telegram-webhook-headers"
+      - "traefik.http.middlewares.telegram-webhook-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.telegram-webhook-headers.headers.customrequestheaders.X-Forwarded-Port=443"
+    restart: unless-stopped
+    profiles: [ production ]
+    networks:
+      - traefik-network
+
   postgres_dev:
     image: postgres:15
     container_name: postgresql_dev
@@ -99,49 +184,10 @@ services:
     profiles: [ development ]
     restart: unless-stopped
 
-  api:
-    build: .
-    container_name: telegramBotAPI
-    environment:
-      - TELEGRAM__BOT_TOKEN=${TELEGRAM__BOT_TOKEN}
-      - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
-      - TELEGRAM__WEBHOOK_URL=${TELEGRAM__WEBHOOK_URL}
-      - TELEGRAM__WEBHOOK_SECRET=${TELEGRAM__WEBHOOK_SECRET}
-      - DATABASE__HOST=${DATABASE__HOST}
-      - DATABASE__PORT=${DATABASE__PORT}
-      - DATABASE__USER=${DATABASE__USER}
-      - DATABASE__PASSWORD=${DATABASE__PASSWORD}
-      - DATABASE__BASENAME=${DATABASE__BASENAME}
-      - TZ=${TIMEZONE}
-      - POLLING_MODE=${POLLING_MODE} # False for webhook mode, True for polling mode
-    expose:
-      - "8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      traefik:
-        condition: service_started
-    volumes:
-      - ./logs:/app/logs
-      - ./migrations:/app/migrations
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.telegram-bot.rule=Host(`${WEBHOOK_DOMAIN}`)"
-      - "traefik.http.routers.telegram-bot.entrypoints=websecure"
-      - "traefik.http.routers.telegram-bot.tls=true"
-      - "traefik.http.routers.telegram-bot.tls.certresolver=myresolver"
-      - "traefik.http.services.telegram-bot.loadbalancer.server.port=8000"
-      - "traefik.http.routers.telegram-bot.middlewares=telegram-webhook-headers"
-      - "traefik.http.middlewares.telegram-webhook-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
-      - "traefik.http.middlewares.telegram-webhook-headers.headers.customrequestheaders.X-Forwarded-Port=443"
-    restart: unless-stopped
-    profiles: [ production ]
-    networks:
-      - traefik-network
-
 volumes:
   postgres_data:
   postgres_dev_data:
+  rabbitmq_data:
 
 networks:
   traefik-network:
