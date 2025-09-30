@@ -1,6 +1,8 @@
+from typing import Optional, Any, Tuple
+
 from aiogram import Router
-from aiogram.types import ChatMemberUpdated
 from aiogram.filters import ChatMemberUpdatedFilter, IS_NOT_MEMBER, IS_MEMBER
+from aiogram.types import ChatMemberUpdated
 
 from app.services import UserService, ChatService
 
@@ -34,6 +36,31 @@ class SystemHandlers:
                 member_status_changed=IS_MEMBER >> IS_NOT_MEMBER)
         )
 
+    async def _extract_event_context(self, event: ChatMemberUpdated, is_join: bool = True) -> Optional[
+        Tuple[Any, Any, Any, Any]
+    ]:
+        """
+        Extract user, chat, bot, and user existence from the event.
+
+        :param event: ChatMemberUpdated event
+        :param is_join: Boolean indicating if the event is a join event
+        :return: Tuple of user, chat, bot, and user existence or None
+        """
+        if is_join:
+            user = event.new_chat_member.user
+        else:
+            user = event.old_chat_member.user
+        chat = event.chat
+        bot = event.bot
+
+        chat_exists = await self.chat_service.get_chat_by_telegram_id(chat.id)
+        if not chat_exists or user.is_bot:
+            return None
+
+        user_exists = await self.user_service.get_user_by_telegram_id(user.id)
+
+        return user, chat, bot, user_exists
+
     async def on_user_join(self, event: ChatMemberUpdated) -> None:
         """
         Handle user joining a chat.
@@ -41,30 +68,51 @@ class SystemHandlers:
         :param event: ChatMemberUpdated event
         :return: None
         """
-        user = event.new_chat_member.user
-        chat = event.chat
-        bot = event.bot
-
-        chat_exists = await self.chat_service.get_chat_by_telegram_id(chat.id)
-        if not chat_exists:
+        result = await self._extract_event_context(event, is_join=True)
+        if not result:
             return
-
-        if user.is_bot:
-            return
-
-        user_exists = await self.user_service.get_user_by_telegram_id(user.id)
+        user, chat, bot, user_exists = result
 
         if user_exists:
             await bot.send_message(
                 chat_id=chat.id,
-                text=f'Lorum Ipsum!',
+                text=f'Добро пожаловать в чат, {user_exists.callsign.capitalize()}!\n\n'
+                     f'Вы уже зарегистрированы в боте, поэтому вам доступны '
+                     f'все слэш-команды. Справка доступна через вызов '
+                     f'`/help`.\n\n'
+                     f'Вовремя проходите опросы, о которых оповещает бот, '
+                     f'чтобы не получить штрафные баллы.\n'
+                     f'Если накопите 3 штрафных балла за пол года, вы будете '
+                     f'исключены из команды без права возврата. Каждое 01 января '
+                     f'и 01 июля штрафные баллы сбрасываются автоматически.\n\n'
+                     f'В исключительных случаях, когда вы не сможете проходить опросы, '
+                     f'сообщите об этом командиру команды или заместителю, вам '
+                     f'выдадут бронь от прохождения опросов.',
                 parse_mode='Markdown'
             )
 
         if not user_exists:
             await bot.send_message(
                 chat_id=chat.id,
-                text=f'Lorum Impsum...',
+                text=f'Добро пожаловать в чат, {user.full_name}!\n\n'
+                     f'Вы еще не зарегистрированы в боте, поэтому вам необходимо '
+                     f'пройти регистрацию, используя команду:\n\n'
+                     f'`/reg позывной`\n\n'
+                     f'Позывной не должен содержать ничего, кроме латинских букв, '
+                     f'и быть длиннее 20 символов.\n\n'
+                     f'Если вы проигнорируете регистрацию в течение 24 часов с момента '
+                     f'вступления в чат, вы будете удалены из него командиром команды и '
+                     f'ваше вступление в команду будет аннулировано.\n\n'
+                     f'После регистрации вам станут доступны все слэш-команды бота, '
+                     f'узнать о которых вы можете, вызвав команду `/help`.\n\n'
+                     f'Вовремя проходите опросы, о которых оповещает бот, '
+                     f'чтобы не получить штрафные баллы.\n'
+                     f'Если накопите 3 штрафных балла за пол года, вы будете '
+                     f'исключены из команды без права возврата. Каждое 01 января '
+                     f'и 01 июля штрафные баллы сбрасываются автоматически.\n\n'
+                     f'В исключительных случаях, когда вы не сможете проходить опросы, '
+                     f'сообщите об этом командиру команды или заместителю, вам '
+                     f'выдадут бронь от прохождения опросов.',
                 parse_mode='Markdown'
             )
 
@@ -75,4 +123,20 @@ class SystemHandlers:
         :param event: ChatMemberUpdated event
         :return: None
         """
-        pass
+        result = await self._extract_event_context(event, is_join=False)
+        if not result:
+            return
+        user, chat, bot, user_exists = result
+
+        if not user_exists:
+            text = f'{user.full_name} удален(а) из чата.'
+        else:
+            text = f'`{user_exists.callsign.capitalize()}` удален(а) из чата.'
+
+        await self.user_service.deactivate_user(user.id)
+
+        await bot.send_message(
+            chat_id=chat.id,
+            text=text,
+            parse_mode='Markdown'
+        )
