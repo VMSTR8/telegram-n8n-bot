@@ -15,6 +15,7 @@ This repository implements a Telegram bot integrated with n8n automations. The p
 - **ORM:** [Tortoise ORM](https://tortoise.github.io/toc.html)
 - **Migrations:** [Aerich](https://tortoise.github.io/migration.html?h=aerich#)
 - **Automations:** [n8n](https://n8n.io/) (integration via the service layer)
+- **Message Broker & Task Queue:** [RabbitMQ](https://www.rabbitmq.com/) + [Celery](https://docs.celeryq.dev/en/stable/)
 - **Containerization:** [Docker](https://www.docker.com/), [docker-compose](https://docs.docker.com/compose/)
 - **Dependency Management:** [requirements.txt](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
 - **Configuration:** [pydantic-settings](https://docs.pydantic.dev/latest/integrations/pydantic_settings/), [.env](https://12factor.net/config)
