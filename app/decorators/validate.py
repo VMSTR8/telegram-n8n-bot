@@ -1,6 +1,9 @@
 from functools import wraps
-from typing import Callable, Any, Awaitable
+from typing import Any, Awaitable, Callable
+
 from aiogram.types import Message
+
+from app.services import MessageQueueService
 from app.utils import validate_callsign_format
 
 
@@ -9,6 +12,9 @@ class CallsignDecorators:
     Class containing decorators for callsign validation.
     Works with methods of classes, not regular functions.
     """
+
+    def __init__(self):
+        self.message_queue_service = MessageQueueService()
 
     @staticmethod
     def validate_callsign_create(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
@@ -25,10 +31,12 @@ class CallsignDecorators:
         :return: Wrapped asynchronous function with the same arguments 
         as the original function
         """
+
         @wraps(func)
         async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> Any:
             if not message.text:
-                await message.reply(
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
                     text='❌ Неверный формат команды.\n'
                          'Отправь команду `/reg позывной`\n'
                          'Команда не должна содержать ничего, кроме текста!',
@@ -38,7 +46,8 @@ class CallsignDecorators:
 
             command_parts = message.text.split()
             if len(command_parts) != 2:
-                await message.reply(
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
                     text='❌ Нужно обязательно написать свой позывной '
                          '(одно слово) '
                          'в текстовом поле после команды.\n\n'
@@ -51,12 +60,13 @@ class CallsignDecorators:
                     parse_mode='Markdown'
                 )
                 return
-            
+
             callsign = command_parts[1].strip()
 
             validation_result = await validate_callsign_format(callsign)
             if not validation_result.is_valid:
-                await message.reply(
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
                     text=f'❌ Неверный формат позывного.\n\n'
                          f'{validation_result.error_message}\n\n'
                          f'Используйте: `/reg позывной`\n\n'
@@ -88,10 +98,12 @@ class CallsignDecorators:
         :return: Wrapped asynchronous function with the same arguments 
         as the original function
         """
+
         @wraps(func)
         async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> Any:
             if not message.text:
-                await message.reply(
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
                     text='❌ Неверный формат команды.\n'
                          'Отправь команду `/update позывной`\n'
                          'Команда не должна содержать ничего, кроме текста!',
@@ -100,23 +112,24 @@ class CallsignDecorators:
                 return
 
             command_parts = message.text.split()
-            
+
             if len(command_parts) >= 2:
-                
+
                 callsign = command_parts[1].strip()
 
                 validation_result = await validate_callsign_format(callsign)
 
                 if not validation_result.is_valid:
-                    await message.reply(
+                    await self.message_queue_service.send_message(
+                        chat_id=message.chat.id,
                         text=f'❌ Неверный формат позывного.\n\n'
-                            f'{validation_result.error_message}\n\n'
-                            f'Используйте: `/update позывной`\n\n'
-                            f'Требования к позывному:\n'
-                            f'🔤 Только латинские буквы\n'
-                            f'📏 Длина от 1 до 20 символов\n'
-                            f'🚫 Без цифр, спец символов и пробелов\n'
-                            f'🆔 Позывной должен быть уникальным',
+                             f'{validation_result.error_message}\n\n'
+                             f'Используйте: `/update позывной`\n\n'
+                             f'Требования к позывному:\n'
+                             f'🔤 Только латинские буквы\n'
+                             f'📏 Длина от 1 до 20 символов\n'
+                             f'🚫 Без цифр, спец символов и пробелов\n'
+                             f'🆔 Позывной должен быть уникальным',
                         parse_mode='Markdown'
                     )
                     return
