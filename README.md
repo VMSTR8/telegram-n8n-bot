@@ -28,11 +28,13 @@ This repository implements a Telegram bot integrated with n8n automations. The p
 - **app/** — main application logic:
     - `api_fastapi/` — FastAPI endpoints and related logic.
     - `bot_telegram/` — Telegram bot implementation (`bot.py`), logging, and utilities.
+    - `celery_tasks/` — Celery tasks for asynchronous message sending in Telegram and bulk messaging. Contains task queue implementations, Telegram API error handling (such as rate limits), and examples of using Celery with aiogram. Used for RabbitMQ integration and managing background message delivery tasks.
     - `handlers/` — bot command and message handlers.
     - `models/` — data models (e.g., `user.py`).
     - `services/` — business logic and integrations (n8n, external APIs).
     - `utils/` — helper functions.
     - `decorators/` — custom decorators (e.g., for authentication, logging).
+    - `celery_app.py` — Celery application configuration and initialization. Sets up the message broker (RabbitMQ), result backend, serialization options, and imports Celery tasks for asynchronous processing (such as sending Telegram messages).
 - **config/** — configuration management (`settings.py` for environment variables).
 - **Dockerfile** and **docker-compose.yml** — containerization and orchestration for development and deployment.
 ## Quick Start
@@ -47,7 +49,10 @@ This repository implements a Telegram bot integrated with n8n automations. The p
     ```sh
     make env
     ```
-4. Fill in the required environment variables in `.env`.
+4. Fill in the required environment variables in `.env`:
+    ```sh
+    vi .env
+    ```
 5. Start the project using Docker:
     ```sh
     make dev-up
@@ -57,8 +62,9 @@ This repository implements a Telegram bot integrated with n8n automations. The p
 
 ## Main Patterns
 
-- **Modular structure:** each layer (API, bot, handlers, services) is placed in a separate directory.
-- **Centralized configuration:** all settings and secrets are in `config/settings.py`.
-- **Bot logic:** in `app/bot_telegram/bot.py`, handlers — in `app/handlers/`.
-- **Service layer:** integrations and business logic — in `app/services/`.
-- **Decorators:** reusable decorators — in `app/decorators/`.
+- **Modular structure:** The project is organized by responsibility: API endpoints (`app/api_fastapi/`), Telegram bot core (`app/bot_telegram/`), handlers (`app/handlers/`), services (`app/services/`), decorators (`app/decorators/`), and Celery tasks (`app/celery_tasks/`).
+- **Centralized configuration:** All environment variables and settings are managed in `config/settings.py`, using Pydantic for type safety and validation.
+- **Bot logic:** The main bot manager and dispatcher setup are in `app/bot_telegram/main.py`. Command and message handlers are grouped in `app/handlers/`.
+- **Service layer:** Business logic, integrations (including n8n and external APIs), and message queueing are implemented in `app/services/`.
+- **Celery integration:** Asynchronous message sending and bulk messaging are handled in `app/celery_tasks/`, with Celery configuration in `app/celery_app.py`.
+- **Reusable decorators:** Custom authentication, validation, and logging decorators are located in `app/decorators/`.
