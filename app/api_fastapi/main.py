@@ -46,17 +46,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
-    #Shutdown
+    # Shutdown
     try:
         bot_manager = BotManager()
         if bot_manager.bot:
             await bot_manager.bot.delete_webhook(drop_pending_updates=True)
             await bot_manager.bot.session.close()
             logging.info('Webhook deleted and bot session closed.')
-        
+
         await close_database()
         logging.info('Database connection closed successfully.')
-    
+
     except Exception as e:
         logging.error(f'Error occurred during shutdown: {e}')
 
@@ -81,4 +81,5 @@ def create_app() -> FastAPI:
 
     return app
 
-app = create_app()
+
+telegrambot_app = create_app()
