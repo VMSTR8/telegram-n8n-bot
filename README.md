@@ -34,7 +34,7 @@ This repository implements a Telegram bot integrated with n8n automations. The p
     - `services/` — business logic and integrations (n8n, external APIs).
     - `utils/` — helper functions.
     - `decorators/` — custom decorators (e.g., for authentication, logging).
-    - `celery_app.py` — Celery application configuration and initialization. Sets up the message broker (RabbitMQ), result backend, serialization options, and imports Celery tasks for asynchronous processing (such as sending Telegram messages).
+- **celery_app.py** — Celery application configuration and initialization. Sets up the message broker (RabbitMQ), result backend, serialization options, and imports Celery tasks for asynchronous processing (such as sending Telegram messages).
 - **config/** — configuration management (`settings.py` for environment variables).
 - **Dockerfile** and **docker-compose.yml** — containerization and orchestration for development and deployment.
 ## Quick Start
