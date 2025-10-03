@@ -1,15 +1,19 @@
 from functools import wraps
-from typing import Callable, Any, Awaitable
-from aiogram.types import Message
-from aiogram.enums import ChatType
+from typing import Any, Awaitable, Callable
 
-from app.services import UserService, ChatService
+from aiogram.enums import ChatType
+from aiogram.types import Message
+
+from app.services import UserService, ChatService, MessageQueueService
 
 
 class AuthDecorators:
     """
     Class containing decorators for authentication checks.
     """
+
+    def __init__(self):
+        self.message_queue_service = MessageQueueService()
 
     @staticmethod
     def required_creator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
@@ -20,15 +24,17 @@ class AuthDecorators:
         :param func: Function to be decorated.
         :return: Wrapped asynchronous function with the same arguments as the original function.
         """
+
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
             user_service = UserService()
             user = await user_service.get_user_by_telegram_id(message.from_user.id)
 
             if not user or not user.is_creator:
-                await message.reply(
-                    '❌ У вас нет прав для выполнения этой команды.\n'
-                    'Только создатель бота может выполнять эту операцию.'
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
+                    text='❌ У вас нет прав для выполнения этой команды.\n'
+                         'Только создатель бота может выполнять эту операцию.'
                 )
                 return
 
@@ -45,15 +51,17 @@ class AuthDecorators:
         :param func: Function to be decorated.
         :return: Wrapped asynchronous function with the same arguments as the original function.
         """
+
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
             user_service = UserService()
             user = await user_service.get_user_by_telegram_id(message.from_user.id)
 
             if not user or not user.is_admin:
-                await message.reply(
-                    '❌ У вас нет прав для выполнения этой команды.\n'
-                    'Только администраторы и создатель бота могут выполнять эту операцию.'
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
+                    text='❌ У вас нет прав для выполнения этой команды.\n'
+                         'Только администраторы и создатель бота могут выполнять эту операцию.'
                 )
                 return
 
@@ -70,16 +78,18 @@ class AuthDecorators:
         :param func: Function to be decorated.
         :return: Wrapped asynchronous function with the same arguments as the original function.
         """
+
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
             user_service = UserService()
             user = await user_service.get_user_by_telegram_id(message.from_user.id)
 
             if not user:
-                await message.reply(
-                    '❌ Вы не зарегистрированы в системе.\n'
-                    'Пожалуйста, используйте команду '
-                    '/reg вместе с вашим позывным для регистрации.'
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
+                    text='❌ Вы не зарегистрированы в системе.\n'
+                         'Пожалуйста, используйте команду '
+                         '/reg вместе с вашим позывным для регистрации.'
                 )
                 return
 
@@ -96,14 +106,16 @@ class AuthDecorators:
         :param func: Function to be decorated.
         :return: Wrapped asynchronous function with the same arguments as the original function.
         """
+
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
             chat_service = ChatService()
             chat_exists = await chat_service.get_chat_by_telegram_id(message.chat.id)
             if not chat_exists:
-                await message.reply(
-                    '❌ Данную команду можно использовать только '
-                    'в привязанном к боту чате.'
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
+                    text='❌ Данную команду можно использовать только '
+                         'в привязанном к боту чате.'
                 )
                 return
 
@@ -119,17 +131,20 @@ class AuthDecorators:
         :param func: Function to be decorated.
         :return: Wrapped asynchronous function with the same arguments as the original function.
         """
+
         @wraps(func)
         async def wrapper(self, message: Message, *args, **kwargs) -> Any:
             if not hasattr(message, "chat") or message.chat is None:
-                await message.reply(
-                    '❌ Не удалось определить тип чата для этой команды.'
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
+                    text='❌ Не удалось определить тип чата для этой команды.'
                 )
                 return
 
             if message.chat.type == ChatType.PRIVATE:
-                await message.reply(
-                    '❌ Данную команду нельзя использовать в приватном чате.'
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
+                    text='❌ Данную команду нельзя использовать в приватном чате.'
                 )
                 return
 
