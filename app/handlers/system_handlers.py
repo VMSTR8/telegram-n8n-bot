@@ -1,10 +1,10 @@
-from typing import Optional, Any, Tuple
+from typing import Any, Optional, Tuple
 
 from aiogram import Router
-from aiogram.filters import ChatMemberUpdatedFilter, IS_NOT_MEMBER, IS_MEMBER
+from aiogram.filters import ChatMemberUpdatedFilter, IS_MEMBER, IS_NOT_MEMBER
 from aiogram.types import ChatMemberUpdated
 
-from app.services import UserService, ChatService
+from app.services import UserService, ChatService, MessageQueueService
 
 
 class SystemHandlers:
@@ -16,6 +16,7 @@ class SystemHandlers:
         self.router = Router()
         self.user_service = UserService()
         self.chat_service = ChatService()
+        self.message_queue_service = MessageQueueService()
         self._register_handlers()
 
     def _register_handlers(self) -> None:
@@ -74,7 +75,7 @@ class SystemHandlers:
         user, chat, bot, user_exists = result
 
         if user_exists:
-            await bot.send_message(
+            await self.message_queue_service.send_message(
                 chat_id=chat.id,
                 text=f'Добро пожаловать в чат, {user_exists.callsign.capitalize()}!\n\n'
                      f'Вы уже зарегистрированы в боте, поэтому вам доступны '
@@ -92,7 +93,7 @@ class SystemHandlers:
             )
 
         if not user_exists:
-            await bot.send_message(
+            await self.message_queue_service.send_message(
                 chat_id=chat.id,
                 text=f'Добро пожаловать в чат, {user.full_name}!\n\n'
                      f'Вы еще не зарегистрированы в боте, поэтому вам необходимо '
@@ -135,7 +136,7 @@ class SystemHandlers:
 
         await self.user_service.deactivate_user(user.id)
 
-        await bot.send_message(
+        await self.message_queue_service.send_message(
             chat_id=chat.id,
             text=text,
             parse_mode='Markdown'
