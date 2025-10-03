@@ -1,7 +1,7 @@
 from .webhook import webhook_router
-from .main import app
+from .main import telegrambot_app
 
 __all__ = [
     'webhook_router',
-    'app'
+    'telegrambot_app'
 ]
