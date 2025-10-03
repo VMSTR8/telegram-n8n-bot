@@ -25,12 +25,4 @@ celery_app.conf.update(
     task_reject_on_worker_lost=True,
 )
 
-"""
-Explicitly import tasks.
-For some reason, autodiscover_tasks is not working.
-So we need to explicitly import tasks.
-Why? I don't know (lol)
-And yes - I know that it's not a good practice to import tasks here.
-But once more time - it's working!
-"""
-from app.celery_tasks import message_tasks
+celery_app.autodiscover_tasks(['app.celery_tasks'])
