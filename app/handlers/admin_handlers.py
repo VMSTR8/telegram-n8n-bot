@@ -4,7 +4,13 @@ from aiogram.types import Message
 
 from app.decorators import AuthDecorators as Auth
 from app.models import UserRole
-from app.services import UserService, ChatService, ChatAlreadyBoundError, SurveyService
+from app.services import (
+    UserService,
+    ChatService,
+    ChatAlreadyBoundError,
+    SurveyService,
+    MessageQueueService
+)
 from config.settings import settings
 
 
@@ -18,6 +24,7 @@ class AdminHandlers:
         self.user_service = UserService()
         self.chat_service = ChatService()
         self.survey_service = SurveyService()
+        self.message_queue_service = MessageQueueService()
         self.tz = settings.timezone_zoneinfo
         self._register_handlers()
 
@@ -54,7 +61,8 @@ class AdminHandlers:
         """
         args = message.text.split(maxsplit=1)
         if len(args) < 2 or not args[1].strip():
-            await message.reply(
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
                 text='❌ Пожалуйста, укажите позывной пользователя после команды.\n'
                      'Пример: `/reserve позывной`',
                 parse_mode='Markdown'
@@ -67,7 +75,8 @@ class AdminHandlers:
         user = await self.user_service.get_user_by_callsign(callsign=callsign)
 
         if not user:
-            await message.reply(
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
                 text=f'❌ Пользователь с позывным `{callsign.capitalize()}` не найден.',
                 parse_mode='Markdown'
             )
@@ -75,7 +84,8 @@ class AdminHandlers:
 
         user.reserved = not user.reserved
         await user.save()
-        await message.reply(
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
             text=f'✅ Статус брони от опросов пользователя `{callsign.capitalize()}` изменён на: '
                  f'{"Есть" if user.reserved else "Нет"}.',
             parse_mode='Markdown'
@@ -105,9 +115,17 @@ class AdminHandlers:
                 title=message.chat.title or 'Без названия'
             )
 
-            await message.reply('✅ Чат успешно привязан к базе данных.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='✅ Чат успешно привязан к базе данных.',
+                parse_mode='Markdown'
+            )
         except ChatAlreadyBoundError as e:
-            await message.reply(f'Не удалось привязать чат:\n{e}')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text=f'Не удалось привязать чат:\n{e}',
+                parse_mode='Markdown'
+            )
 
     @Auth.required_creator
     @Auth.required_not_private_chat
@@ -120,9 +138,17 @@ class AdminHandlers:
         """
         is_unbound = await self.chat_service.unbind_chat(telegram_id=message.chat.id)
         if is_unbound:
-            await message.reply('✅ Чат успешно отвязан от базы данных.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='✅ Чат успешно отвязан от базы данных.',
+                parse_mode='Markdown'
+            )
         else:
-            await message.reply('❌ Не удалось отвязать чат.\nВозможно, он уже был отвязан ранее.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Не удалось отвязать чат.\nВозможно, он уже был отвязан ранее.',
+                parse_mode='Markdown'
+            )
 
     @Auth.required_admin
     @Auth.required_not_private_chat
@@ -136,14 +162,19 @@ class AdminHandlers:
         """
         chat = await self.chat_service.get_chat_by_telegram_id(message.chat.id)
         if not chat:
-            await message.reply('❌ Этот чат не привязан к боту.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Этот чат не привязан к боту.',
+                parse_mode='Markdown'
+            )
             return
 
         thread_id = message.message_thread_id
         if not thread_id:
-            await message.reply(
-                '❌ Пожалуйста, вызовите эту команду в треде (ветке) чата, '
-                'который вы хотите назначить для оповещений по опросам.'
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Пожалуйста, вызовите эту команду в треде (ветке) чата, '
+                     'который вы хотите назначить для оповещений по опросам.'
             )
             return
 
@@ -152,7 +183,11 @@ class AdminHandlers:
             thread_id=thread_id
         )
 
-        await message.reply('✅ Тред успешно назначен для оповещений по опросам.')
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
+            text='✅ Тред успешно назначен для оповещений по опросам.',
+            parse_mode='Markdown'
+        )
 
     @Auth.required_admin
     @Auth.required_not_private_chat
@@ -165,14 +200,22 @@ class AdminHandlers:
         """
         chat = await self.chat_service.get_chat_by_telegram_id(message.chat.id)
         if not chat:
-            await message.reply('❌ Этот чат не привязан к боту.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Этот чат не привязан к боту.',
+                parse_mode='Markdown'
+            )
             return
 
         await self.chat_service.delete_thread_id(
             telegram_id=message.chat.id
         )
 
-        await message.reply('✅ Тред успешно отвязан от оповещений по опросам.')
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
+            text='✅ Тред успешно отвязан от оповещений по опросам.',
+            parse_mode='Markdown'
+        )
 
     @Auth.required_creator
     async def add_admin_command(self, message: Message) -> None:
@@ -184,7 +227,8 @@ class AdminHandlers:
         """
         args = message.text.split(maxsplit=1)
         if len(args) < 2 or not args[1].strip():
-            await message.reply(
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
                 text='❌ Пожалуйста, укажите позывной пользователя после команды.\n'
                      'Пример: `/add_admin позывной`',
                 parse_mode='Markdown'
@@ -193,15 +237,27 @@ class AdminHandlers:
 
         user = await self.user_service.get_user_by_callsign(args[1].strip().lower())
         if not user:
-            await message.reply('❌ Пользователь не найден.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Пользователь не найден.',
+                parse_mode='Markdown'
+            )
             return
 
         if user.is_creator:
-            await message.reply('❌ Нельзя сделать создателя администратором.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Нельзя сделать создателя администратором.',
+                parse_mode='Markdown'
+            )
             return
 
         if user.is_admin:
-            await message.reply('❌ Пользователь уже является администратором.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Пользователь уже является администратором.',
+                parse_mode='Markdown'
+            )
             return
 
         await self.user_service.set_user_role(
@@ -209,7 +265,8 @@ class AdminHandlers:
             new_role=UserRole.ADMIN
         )
 
-        await message.reply(
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
             text=f'✅ Пользователь `{user.callsign.capitalize()}` успешно добавлен в администраторы.',
             parse_mode='Markdown'
         )
@@ -224,7 +281,8 @@ class AdminHandlers:
         """
         args = message.text.split(maxsplit=1)
         if len(args) < 2 or not args[1].strip():
-            await message.reply(
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
                 text='❌ Пожалуйста, укажите позывной пользователя после команды.\n'
                      'Пример: `/remove_admin позывной`',
                 parse_mode='Markdown'
@@ -233,15 +291,27 @@ class AdminHandlers:
 
         user = await self.user_service.get_user_by_callsign(args[1].strip().lower())
         if not user:
-            await message.reply('❌ Пользователь не найден.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Пользователь не найден.',
+                parse_mode='Markdown'
+            )
             return
 
         if user.is_creator:
-            await message.reply('❌ Нельзя снять роль администратора с создателя.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Нельзя снять роль администратора с создателя.',
+                parse_mode='Markdown'
+            )
             return
 
         if not user.is_admin:
-            await message.reply('❌ Пользователь не является администратором.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Пользователь не является администратором.',
+                parse_mode='Markdown'
+            )
             return
 
         await self.user_service.set_user_role(
@@ -249,7 +319,8 @@ class AdminHandlers:
             new_role=UserRole.USER
         )
 
-        await message.reply(
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
             text=f'✅ Роль администратора у пользователя `{user.callsign.capitalize()}` успешно снята.',
             parse_mode='Markdown'
         )
@@ -265,7 +336,11 @@ class AdminHandlers:
         admin_list = await self.user_service.get_users_by_role(UserRole.ADMIN)
 
         if not admin_list:
-            await message.reply('❌ Администраторы не назначены.')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Администраторы не назначены.',
+                parse_mode='Markdown'
+            )
             return
 
         admin_lines = []
@@ -282,7 +357,8 @@ class AdminHandlers:
         for line in admin_lines:
             line_with_newline = line + '\n'
             if len(chunk) + len(line_with_newline) > MAX_MESSAGE_LENGTH:
-                await message.reply(
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
                     text=chunk.rstrip(),
                     parse_mode='Markdown',
                     disable_web_page_preview=True
@@ -294,7 +370,8 @@ class AdminHandlers:
                 chunk += line_with_newline
 
         if chunk.strip():
-            await message.reply(
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
                 text=chunk.rstrip(),
                 parse_mode='Markdown',
                 disable_web_page_preview=True
