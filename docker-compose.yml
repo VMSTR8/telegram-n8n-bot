@@ -1,3 +1,4 @@
+# Production services
 services:
   traefik:
     image: traefik:v2.11
@@ -56,47 +57,55 @@ services:
     networks:
       - traefik-network
 
-  # rabbitmq:
-  #   image: rabbitmq:3.13-management
-  #   container_name: rabbitmq
-  #   environment:
-  #     RABBITMQ_USER: ${RMQ_USER}
-  #     RABBITMQ_PASS: ${RMQ_PASSWORD}
-  #     RABBITMQ_VHOST: ${RMQ_VHOST}
-  #   ports:
-  #     - "5672:5672"
-  #     - "15672:15672"
-  #   volumes:
-  #     - rabbitmq_data:/var/lib/rabbitmq
-  #     - ./app/messaging/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
-  #     - ./app/messaging/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
-  #   healthcheck:
-  #     test: ["CMD", "rabbitmq-diagnostics", "ping"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-  #   profiles: [ production ]
-  #   restart: unless-stopped
-  #   networks:
-  #     - traefik-network
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles: [ production ]
+    restart: unless-stopped
+    networks:
+      - traefik-network
   
-  # celery_worker:
-  #   build: .
-  #   container_name: celery_worker
-  #   command: celery -A app.celery_tasks worker --loglevel=info
-  #   depends_on:
-  #     - rabbitmq
-  #   environment:
-  #     - CELERY_BROKER_URL=amqp://${RMQ_USER}:${RMQ_PASSWORD}@${RMQ_HOST}:${RMQ_PORT}/${RMQ_VHOST}
-  #     - CELERY_RESULT_BACKEND=rpc://
-  #   profiles: [ production ]
-  #   restart: unless-stopped
-  #   networks:
-  #     - traefik-network
+  celery_worker:
+    build: .
+    container_name: celery_worker
+    command: celery -A app.celery_app worker --loglevel=info
+    environment:
+      - TELEGRAM__BOT_TOKEN=${TELEGRAM__BOT_TOKEN}
+      - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
+      - DATABASE__HOST=${DATABASE__HOST}
+      - DATABASE__PORT=${DATABASE__PORT}
+      - DATABASE__USER=${DATABASE__USER}
+      - DATABASE__PASSWORD=${DATABASE__PASSWORD}
+      - DATABASE__BASENAME=${DATABASE__BASENAME}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    profiles: [ production ]
+    restart: unless-stopped
+    networks:
+      - traefik-network
 
   api:
     build: .
-    container_name: telegramBotAPI
+    container_name: fastapi_app
     environment:
       - TELEGRAM__BOT_TOKEN=${TELEGRAM__BOT_TOKEN}
       - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
@@ -107,13 +116,9 @@ services:
       - DATABASE__USER=${DATABASE__USER}
       - DATABASE__PASSWORD=${DATABASE__PASSWORD}
       - DATABASE__BASENAME=${DATABASE__BASENAME}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672//
       - TZ=${TIMEZONE}
       - POLLING_MODE=${POLLING_MODE} # False for webhook mode, True for polling mode
-      - RABBITMQ_HOST=${RABBITMQ_HOST}
-      - RABBITMQ_PORT=${RABBITMQ_PORT}
-      - RABBITMQ_USER=${RABBITMQ_DEFAULT_USER}
-      - RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS}
-      - RABBITMQ_VHOST=${RABBITMQ_DEFAULT_VHOST}
     expose:
       - "8000"
     depends_on:
@@ -121,8 +126,6 @@ services:
         condition: service_healthy
       traefik:
         condition: service_started
-      rabbitmq:
-        condition: service_healthy
     volumes:
       - ./logs:/app/logs
       - ./migrations:/app/migrations
@@ -141,6 +144,7 @@ services:
     networks:
       - traefik-network
 
+  # Development services (only for debugging while developing)
   postgres_dev:
     image: postgres:15
     container_name: postgresql_dev
@@ -162,7 +166,7 @@ services:
 
   dev:
     build: .
-    container_name: telegramBot_polling_dev
+    container_name: polling_bot
     environment:
       - TELEGRAM__BOT_TOKEN=${TELEGRAM__BOT_TOKEN}
       - TELEGRAM__CREATOR_ID=${TELEGRAM__CREATOR_ID}
