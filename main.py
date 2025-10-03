@@ -41,7 +41,7 @@ def run_webhook_mode() -> None:
     logging.info('Starting application in webhook mode...')
 
     uvicorn.run(
-        app='app.api_fastapi:app',
+        app='app.api_fastapi:telegrambot_app',
         host='0.0.0.0',
         port=8000,
         reload=False,
