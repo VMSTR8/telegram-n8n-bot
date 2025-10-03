@@ -2,12 +2,12 @@ import logging
 from datetime import datetime
 
 from aiogram import Router
-from aiogram.types import Message
 from aiogram.filters import Command, CommandStart
+from aiogram.types import Message
 
-from app.services import UserService, ChatService, SurveyService
-from app.decorators import CallsignDecorators as Callsign
 from app.decorators import AuthDecorators as Auth
+from app.decorators import CallsignDecorators as Callsign
+from app.services import UserService, ChatService, SurveyService, MessageQueueService
 from config.settings import settings
 
 
@@ -21,6 +21,7 @@ class UserHandlers:
         self.user_service = UserService()
         self.chat_service = ChatService()
         self.survey_service = SurveyService()
+        self.message_queue_service = MessageQueueService()
         self.tz = settings.timezone_zoneinfo
         self._datetime_format = '%d.%m.%Y %H:%M'
         self._register_handlers()
@@ -38,8 +39,7 @@ class UserHandlers:
         self.router.message(Command('profile'))(self.profile_command)
         self.router.message(Command('surveys'))(self.surveys_command)
 
-    @staticmethod
-    async def start_command(message: Message) -> None:
+    async def start_command(self, message: Message) -> None:
         """
         Command handler for /start. Sends a welcome message and instructions.
 
@@ -57,11 +57,13 @@ class UserHandlers:
             '🚫 Без цифр, спец символов и пробелов\n'
             '🆔 Позывной должен быть уникальным'
         )
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
+            text=start_text,
+            parse_mode='Markdown'
+        )
 
-        await message.answer(text=start_text, parse_mode='Markdown')
-
-    @staticmethod
-    async def help_command(message: Message) -> None:
+    async def help_command(self, message: Message) -> None:
         """
         Command handler for /help. Sends a list of available commands.
 
@@ -89,7 +91,12 @@ class UserHandlers:
             '• `/add_admin позывной` - Добавить администратора\n'
             '• `/remove_admin позывной` - Убрать администратора'
         )
-        await message.reply(text=help_text, parse_mode='Markdown')
+
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
+            text=help_text,
+            parse_mode='Markdown'
+        )
 
     @Callsign.validate_callsign_create
     async def register_command(self, message: Message, callsign: str) -> None:
@@ -103,9 +110,10 @@ class UserHandlers:
         try:
             user_exists = await self.user_service.get_user_by_telegram_id(message.from_user.id)
             if user_exists:
-                await message.reply(
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
                     text=f'❌ Вы уже зарегистрированы в системе.\n\n'
-                    f'Ваш позывной: *{user_exists.callsign.capitalize()}*',
+                         f'Важный позывной: *{user_exists.callsign.capitalize()}*',
                     parse_mode='Markdown'
                 )
                 return
@@ -121,20 +129,27 @@ class UserHandlers:
                           if message.from_user.username else None)
             )
 
-            await message.reply(
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
                 text=f'✅ Вы успешно зарегистрировались!\n'
-                f'Позывной: {user.callsign.capitalize()}\n'
-                f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
-                f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
-                f'Username: {f'@{user.username}' if user.username else 'username не указан'}',
+                     f'Позывной: {user.callsign.capitalize()}\n'
+                     f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
+                     f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
+                     f'Username: {f'@{user.username}' if user.username else 'Username не указан'}',
                 parse_mode='Markdown'
             )
 
         except ValueError as e:
-            await message.reply(f'❌ Ошибка регистрации: {e}')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text=f'❌ Ошибка регистрации: {e}',
+                parse_mode='Markdown'
+            )
         except Exception as e:
-            await message.reply(
-                '❌ Произошла ошибка при регистрации. Пожалуйста, попробуйте позже.'
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Произошла ошибка при регистрации. Пожалуйста, попробуйте позже.',
+                parse_mode='Markdown'
             )
             logging.error(f'Error occurred during registration: {e}')
 
@@ -168,13 +183,23 @@ class UserHandlers:
 
             await self.user_service.update_user(user.telegram_id, **data)
 
-            await message.reply('✅ Профиль успешно обновлён!')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='✅ Профиль успешно обновлён!',
+                parse_mode='Markdown'
+            )
 
         except ValueError as e:
-            await message.reply(f'❌ Ошибка обновления профиля: {e}')
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text=f'❌ Ошибка обновления профиля: {e}',
+                parse_mode='Markdown'
+            )
         except Exception as e:
-            await message.reply(
-                '❌ Произошла ошибка при обновлении профиля. Пожалуйста, попробуйте позже.'
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Произошла ошибка при обновлении профиля. Пожалуйста, попробуйте позже.',
+                parse_mode='Markdown'
             )
             logging.error(f'Error occurred while updating user profile: {e}')
 
@@ -202,7 +227,11 @@ class UserHandlers:
             f'⚙️ Роль: {user.role.value.capitalize()}'
         )
 
-        await message.reply(text=profile_text, parse_mode='Markdown')
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
+            text=profile_text,
+            parse_mode='Markdown'
+        )
 
     @Auth.required_chat_bind
     @Auth.required_user_registration
@@ -216,7 +245,8 @@ class UserHandlers:
         active_surveys = await self.survey_service.get_active_surveys()
 
         if not active_surveys:
-            await message.reply(
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
                 text='В данный момент нет активных опросов.',
                 parse_mode='Markdown'
             )
@@ -232,4 +262,8 @@ class UserHandlers:
                 ).strftime(self._datetime_format)}\n\n'
             )
 
-        await message.reply(text=surveys_text, parse_mode='Markdown')
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
+            text=surveys_text,
+            parse_mode='Markdown'
+        )
