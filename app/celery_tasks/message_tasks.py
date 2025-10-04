@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter, TelegramAPIError
+from aiogram.types import Message
 
 from app.celery_app import celery_app
 from config import settings
@@ -11,13 +12,14 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(bind=True, max_retries=5)
+@celery_app.task(bind=True, max_retries=5, ignore_result=True)
 def send_telegram_message(
         self,
         chat_id: int,
         text: str,
         parse_mode: str = 'HTML',
-        disable_web_page_preview: bool = False
+        disable_web_page_preview: bool = False,
+        message_id: int = None
 ) -> Dict[str, Any]:
     """
     Send a message to Telegram via Celery.
@@ -26,6 +28,7 @@ def send_telegram_message(
     :param text: Message text
     :param parse_mode: Parse mode (HTML, Markdown)
     :param disable_web_page_preview: Disable web page preview
+    :param message_id: If provided, reply to this message ID
     :return: Sending result
     """
     try:
@@ -42,7 +45,8 @@ def send_telegram_message(
                     chat_id=chat_id,
                     text=text,
                     parse_mode=parse_mode,
-                    disable_web_page_preview=disable_web_page_preview
+                    disable_web_page_preview=disable_web_page_preview,
+                    reply_to_message_id=message_id
                 )
                 return result
             finally:
@@ -74,7 +78,7 @@ def send_telegram_message(
 
 # this task MAY BE used in future
 # or may be not
-@celery_app.task(bind=True, max_retries=3)
+@celery_app.task(bind=True, max_retries=3, ignore_result=True)
 def send_bulk_messages(self, messages: list) -> List[Dict[str, Any]]:
     """
     Send multiple messages with controlled speed.
