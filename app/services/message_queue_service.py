@@ -23,7 +23,8 @@ class MessageQueueService:
             chat_id: int,
             text: str,
             parse_mode: str = 'HTML',
-            disable_web_page_preview: bool = False
+            disable_web_page_preview: bool = False,
+            message_id: int = None
     ) -> Dict[str, Any]:
         """
         Add message to queue for sending.
@@ -32,6 +33,7 @@ class MessageQueueService:
         :param text: Message text
         :param parse_mode: Parse mode
         :param disable_web_page_preview: Disable web page preview
+        :param message_id: If provided, reply to this message ID
         :return: Result of adding to queue
         """
         try:
@@ -40,7 +42,8 @@ class MessageQueueService:
                 chat_id=chat_id,
                 text=text,
                 parse_mode=parse_mode,
-                disable_web_page_preview=disable_web_page_preview
+                disable_web_page_preview=disable_web_page_preview,
+                message_id=message_id
             )
 
             self.logger.info(f'Message queued for chat {chat_id}, task ID: {task.id}')
