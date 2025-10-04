@@ -79,12 +79,12 @@ class UserHandlers:
             '• `/surveys` - Список активных опросов\n'
             '• `/help` - Показать эту справку\n\n'
             '🔧 Администратор:\n'
-            '• `/bind_chat` - Привязать чат к боту\n'
-            '• `/bind_thread` - Назначить топик для оповещений по опросам\n'
-            '• `/unbind_thread` - Отвязать топик для оповещений по опросам\n'
             '• `/reserve позывной` - Повесить или снять бронь на прохождение опросов '
             'для конкретного пользователя\n'
             '• `/create_survey название дата_окончания` - Создать опрос\n'
+            '• `/bind_chat` - Привязать чат к боту\n'
+            '• `/bind_thread` - Назначить топик для оповещений по опросам\n'
+            '• `/unbind_thread` - Отвязать топик для оповещений по опросам\n'
             '• `/admin_list` - Показать список администраторов\n\n'
             '👑 Создатель:\n'
             '• `/unbind_chat` - Отвязать чат от бота\n'
@@ -95,7 +95,8 @@ class UserHandlers:
         await self.message_queue_service.send_message(
             chat_id=message.chat.id,
             text=help_text,
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            message_id=message.message_id
         )
 
     @Callsign.validate_callsign_create
@@ -114,7 +115,8 @@ class UserHandlers:
                     chat_id=message.chat.id,
                     text=f'❌ Вы уже зарегистрированы в системе.\n\n'
                          f'Важный позывной: *{user_exists.callsign.capitalize()}*',
-                    parse_mode='Markdown'
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
@@ -136,20 +138,23 @@ class UserHandlers:
                      f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
                      f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
                      f'Username: {f'@{user.username}' if user.username else 'Username не указан'}',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
 
         except ValueError as e:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text=f'❌ Ошибка регистрации: {e}',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
         except Exception as e:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Произошла ошибка при регистрации. Пожалуйста, попробуйте позже.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             logging.error(f'Error occurred during registration: {e}')
 
@@ -186,20 +191,23 @@ class UserHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='✅ Профиль успешно обновлён!',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
 
         except ValueError as e:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text=f'❌ Ошибка обновления профиля: {e}',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
         except Exception as e:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Произошла ошибка при обновлении профиля. Пожалуйста, попробуйте позже.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             logging.error(f'Error occurred while updating user profile: {e}')
 
@@ -230,7 +238,8 @@ class UserHandlers:
         await self.message_queue_service.send_message(
             chat_id=message.chat.id,
             text=profile_text,
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            message_id=message.message_id
         )
 
     @Auth.required_chat_bind
@@ -248,7 +257,8 @@ class UserHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='В данный момент нет активных опросов.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -265,5 +275,6 @@ class UserHandlers:
         await self.message_queue_service.send_message(
             chat_id=message.chat.id,
             text=surveys_text,
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            message_id=message.message_id
         )
