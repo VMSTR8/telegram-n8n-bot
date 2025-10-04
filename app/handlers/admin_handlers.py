@@ -35,14 +35,14 @@ class AdminHandlers:
         :return: None
         """
         # Commands for admins
+        self.router.message(Command('reserve'))(self.reserve_command)
+        self.router.message(Command('create_survey'))(
+            self.create_survey_command
+        )
         self.router.message(Command('bind_chat'))(self.bind_chat_command)
         self.router.message(Command('bind_thread'))(self.bind_thread_command)
         self.router.message(Command('unbind_thread'))(
             self.unbind_thread_command
-        )
-        self.router.message(Command('reserve'))(self.reserve_command)
-        self.router.message(Command('create_survey'))(
-            self.create_survey_command
         )
         self.router.message(Command('admin_list'))(self.admin_list_command)
 
@@ -65,7 +65,8 @@ class AdminHandlers:
                 chat_id=message.chat.id,
                 text='❌ Пожалуйста, укажите позывной пользователя после команды.\n'
                      'Пример: `/reserve позывной`',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -78,7 +79,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text=f'❌ Пользователь с позывным `{callsign.capitalize()}` не найден.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -88,7 +90,8 @@ class AdminHandlers:
             chat_id=message.chat.id,
             text=f'✅ Статус брони от опросов пользователя `{callsign.capitalize()}` изменён на: '
                  f'{"Есть" if user.reserved else "Нет"}.',
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            message_id=message.message_id
         )
 
     @Auth.required_admin
@@ -118,13 +121,15 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='✅ Чат успешно привязан к базе данных.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
         except ChatAlreadyBoundError as e:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text=f'Не удалось привязать чат:\n{e}',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
 
     @Auth.required_creator
@@ -141,13 +146,15 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='✅ Чат успешно отвязан от базы данных.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
         else:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Не удалось отвязать чат.\nВозможно, он уже был отвязан ранее.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
 
     @Auth.required_admin
@@ -165,7 +172,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Этот чат не привязан к боту.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -174,7 +182,9 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Пожалуйста, вызовите эту команду в треде (ветке) чата, '
-                     'который вы хотите назначить для оповещений по опросам.'
+                     'который вы хотите назначить для оповещений по опросам.',
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -186,7 +196,8 @@ class AdminHandlers:
         await self.message_queue_service.send_message(
             chat_id=message.chat.id,
             text='✅ Тред успешно назначен для оповещений по опросам.',
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            message_id=message.message_id
         )
 
     @Auth.required_admin
@@ -203,7 +214,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Этот чат не привязан к боту.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -214,7 +226,8 @@ class AdminHandlers:
         await self.message_queue_service.send_message(
             chat_id=message.chat.id,
             text='✅ Тред успешно отвязан от оповещений по опросам.',
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            message_id=message.message_id
         )
 
     @Auth.required_creator
@@ -231,7 +244,8 @@ class AdminHandlers:
                 chat_id=message.chat.id,
                 text='❌ Пожалуйста, укажите позывной пользователя после команды.\n'
                      'Пример: `/add_admin позывной`',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -240,7 +254,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Пользователь не найден.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -248,7 +263,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Нельзя сделать создателя администратором.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -256,7 +272,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Пользователь уже является администратором.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -268,7 +285,8 @@ class AdminHandlers:
         await self.message_queue_service.send_message(
             chat_id=message.chat.id,
             text=f'✅ Пользователь `{user.callsign.capitalize()}` успешно добавлен в администраторы.',
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            message_id=message.message_id
         )
 
     @Auth.required_creator
@@ -285,7 +303,8 @@ class AdminHandlers:
                 chat_id=message.chat.id,
                 text='❌ Пожалуйста, укажите позывной пользователя после команды.\n'
                      'Пример: `/remove_admin позывной`',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -294,7 +313,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Пользователь не найден.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -302,7 +322,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Нельзя снять роль администратора с создателя.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -310,7 +331,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Пользователь не является администратором.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -322,7 +344,8 @@ class AdminHandlers:
         await self.message_queue_service.send_message(
             chat_id=message.chat.id,
             text=f'✅ Роль администратора у пользователя `{user.callsign.capitalize()}` успешно снята.',
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            message_id=message.message_id
         )
 
     @Auth.required_admin
@@ -339,7 +362,8 @@ class AdminHandlers:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Администраторы не назначены.',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                message_id=message.message_id
             )
             return
 
@@ -361,7 +385,8 @@ class AdminHandlers:
                     chat_id=message.chat.id,
                     text=chunk.rstrip(),
                     parse_mode='Markdown',
-                    disable_web_page_preview=True
+                    disable_web_page_preview=True,
+                    message_id=message.message_id
                 )
                 chunk = ''
             if not chunk:
@@ -374,5 +399,6 @@ class AdminHandlers:
                 chat_id=message.chat.id,
                 text=chunk.rstrip(),
                 parse_mode='Markdown',
-                disable_web_page_preview=True
+                disable_web_page_preview=True,
+                message_id=message.message_id
             )
