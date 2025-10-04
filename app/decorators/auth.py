@@ -34,7 +34,9 @@ class AuthDecorators:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
                     text='❌ У вас нет прав для выполнения этой команды.\n'
-                         'Только создатель бота может выполнять эту операцию.'
+                         'Только создатель бота может выполнять эту операцию.',
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
@@ -61,7 +63,9 @@ class AuthDecorators:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
                     text='❌ У вас нет прав для выполнения этой команды.\n'
-                         'Только администраторы и создатель бота могут выполнять эту операцию.'
+                         'Только администраторы и создатель бота могут выполнять эту операцию.',
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
@@ -89,7 +93,9 @@ class AuthDecorators:
                     chat_id=message.chat.id,
                     text='❌ Вы не зарегистрированы в системе.\n'
                          'Пожалуйста, используйте команду '
-                         '/reg вместе с вашим позывным для регистрации.'
+                         '/reg вместе с вашим позывным для регистрации.',
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
@@ -115,7 +121,9 @@ class AuthDecorators:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
                     text='❌ Данную команду можно использовать только '
-                         'в привязанном к боту чате.'
+                         'в привязанном к боту чате.',
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
@@ -137,14 +145,18 @@ class AuthDecorators:
             if not hasattr(message, "chat") or message.chat is None:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
-                    text='❌ Не удалось определить тип чата для этой команды.'
+                    text='❌ Не удалось определить тип чата для этой команды.',
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
             if message.chat.type == ChatType.PRIVATE:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
-                    text='❌ Данную команду нельзя использовать в приватном чате.'
+                    text='❌ Данную команду нельзя использовать в приватном чате.',
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
