@@ -40,7 +40,8 @@ class CallsignDecorators:
                     text='❌ Неверный формат команды.\n'
                          'Отправь команду `/reg позывной`\n'
                          'Команда не должна содержать ничего, кроме текста!',
-                    parse_mode='Markdown'
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
@@ -57,7 +58,8 @@ class CallsignDecorators:
                          '📏 Длина от 1 до 20 символов\n'
                          '🚫 Без цифр, спец символов и пробелов\n'
                          '🆔 Позывной должен быть уникальным',
-                    parse_mode='Markdown'
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
@@ -75,7 +77,8 @@ class CallsignDecorators:
                          f'📏 Длина от 1 до 20 символов\n'
                          f'🚫 Без цифр, спец символов и пробелов\n'
                          f'🆔 Позывной должен быть уникальным',
-                    parse_mode='Markdown'
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
@@ -107,7 +110,8 @@ class CallsignDecorators:
                     text='❌ Неверный формат команды.\n'
                          'Отправь команду `/update позывной`\n'
                          'Команда не должна содержать ничего, кроме текста!',
-                    parse_mode='Markdown'
+                    parse_mode='Markdown',
+                    message_id=message.message_id
                 )
                 return
 
@@ -130,7 +134,8 @@ class CallsignDecorators:
                              f'📏 Длина от 1 до 20 символов\n'
                              f'🚫 Без цифр, спец символов и пробелов\n'
                              f'🆔 Позывной должен быть уникальным',
-                        parse_mode='Markdown'
+                        parse_mode='Markdown',
+                        message_id=message.message_id
                     )
                     return
 
