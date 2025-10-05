@@ -61,8 +61,8 @@ services:
     image: rabbitmq:3-management
     container_name: rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ__USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ__PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -90,7 +90,11 @@ services:
       - DATABASE__USER=${DATABASE__USER}
       - DATABASE__PASSWORD=${DATABASE__PASSWORD}
       - DATABASE__BASENAME=${DATABASE__BASENAME}
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+      - RABBITMQ__HOST=${RABBITMQ__HOST}
+      - RABBITMQ__PORT=${RABBITMQ__PORT}
+      - RABBITMQ__USER=${RABBITMQ__USER}
+      - RABBITMQ__PASSWORD=${RABBITMQ__PASSWORD}
+      - TZ=${TIMEZONE}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -116,7 +120,10 @@ services:
       - DATABASE__USER=${DATABASE__USER}
       - DATABASE__PASSWORD=${DATABASE__PASSWORD}
       - DATABASE__BASENAME=${DATABASE__BASENAME}
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+      - RABBITMQ__HOST=${RABBITMQ__HOST}
+      - RABBITMQ__PORT=${RABBITMQ__PORT}
+      - RABBITMQ__USER=${RABBITMQ__USER}
+      - RABBITMQ__PASSWORD=${RABBITMQ__PASSWORD}
       - TZ=${TIMEZONE}
       - POLLING_MODE=${POLLING_MODE} # False for webhook mode, True for polling mode
     expose:
@@ -145,8 +152,43 @@ services:
     profiles: [ production ]
     networks:
       - traefik-network
+  
+  # n8n:
+  #   image: docker.n8n.io/n8nio/n8n
+  #   container_name: n8n
+  #   environment:
+  #     - DB_TYPE=postgresdb
+  #     - DATABASE__HOST=${DATABASE__HOST}
+  #     - DATABASE__PORT=${DATABASE__PORT}
+  #     - DATABASE__USER=${DATABASE__USER}
+  #     - DATABASE___PASSWORD=${DATABASE__PASSWORD}
+  #     - DATABASE__DBNAME=
+  #     - N8N_BASIC_AUTH_ACTIVE=true
+  #     - N8N_BASIC_AUTH_USER=${N8N_USER}
+  #     - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+  #     - WEBHOOK_URL=${N8N_WEBHOOK_URL}
+  #     - N8N_HOST=${N8N_WEBHOOK_DOMAIN}
+  #     - N8N_PORT=5678
+  #     - N8N_PROTOCOL=https
+  #     - TZ=${TIMEZONE}
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./n8n_data:/home/node/.n8n
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.n8n.rule=Host(`${N8N_WEBHOOK_DOMAIN}`)"
+  #     - "traefik.http.routers.n8n.entrypoints=websecure"
+  #     - "traefik.http.routers.n8n.tls=true"
+  #     - "traefik.http.routers.n8n.tls.certresolver=myresolver"
+  #     - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+  #   profiles: [ production ]
+  #   restart: unless-stopped
+  #   networks:
+  #     - traefik-network
 
-  # Development services (only for debugging while developing)
+# Development services (only for debugging while developing)
   postgres_dev:
     image: postgres:15
     container_name: postgresql_dev
@@ -194,6 +236,7 @@ volumes:
   postgres_data:
   postgres_dev_data:
   rabbitmq_data:
+  # n8n_data:
 
 networks:
   traefik-network:
