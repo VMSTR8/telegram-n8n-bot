@@ -1,4 +1,4 @@
-# telegramBot_n8n
+# telegram-n8n-bot
 
 > **Attention:** The project is under active development.
 
@@ -37,6 +37,49 @@ This repository implements a Telegram bot integrated with n8n automations. The p
 - **celery_app.py** — Celery application configuration and initialization. Sets up the message broker (RabbitMQ), result backend, serialization options, and imports Celery tasks for asynchronous processing (such as sending Telegram messages).
 - **config/** — configuration management (`settings.py` for environment variables).
 - **Dockerfile** and **docker-compose.yml** — containerization and orchestration for development and deployment.
+
+## Architecture Diagram
+
+```mermaid
+flowchart TD
+    subgraph "User Interaction"
+        U[User] --> TB[Telegram Bot<br/>aiogram]
+    end
+    
+    subgraph "Main Flow"
+        TB --> H[Handlers]
+        H --> S[Services<br/>Business Logic]
+        S --> M[Models<br/>Tortoise ORM<br/>Database]
+        S --> Ext[External APIs]
+    end
+    
+    subgraph "Asynchronous Tasks"
+        S --> CT[Celery Tasks]
+        CT --> RQ[RabbitMQ<br/>Queue]
+        RQ --> TAPI[Telegram API<br/>Message Sending]
+    end
+    
+    subgraph "Integrations"
+        N8N[n8n Workflows] --> WH[Webhook<br/>FastAPI API]
+        WH --> S
+    end
+    
+    subgraph "Infrastructure"
+        CFG[Config<br/>settings.py<br/>.env] --> TB
+        CFG --> S
+        CFG --> CT
+        DCK[Docker<br/>Containerization] --> TB
+        DCK --> WH
+        DCK --> RQ
+    end
+    
+    subgraph "Entry Point"
+        Main[main.py] --> TB
+        Main --> WH
+        Main --> CT
+    end
+```
+
 ## Quick Start
 
 1. Make sure you have [Docker](https://www.docker.com/get-started) installed on your machine.
