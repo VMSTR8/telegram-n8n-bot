@@ -1,5 +1,3 @@
-import os
-
 from celery import Celery
 
 from config import settings
@@ -7,7 +5,7 @@ from config import settings
 celery_app = Celery('telegram_bot')
 
 celery_app.conf.update(
-    broker_url=os.getenv('RABBITMQ_URL'),  # TODO: i'll add settings link later
+    broker_url=settings.rabbitmq.url,
     result_backend='rpc://',
 
     # Settings for task serialization
