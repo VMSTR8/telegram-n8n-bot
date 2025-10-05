@@ -24,6 +24,18 @@ class DatabaseSettings(BaseSettings):
     @property
     def url(self) -> str:
         return f'postgres://{self.user}:{self.password}@{self.host}:{self.port}/{self.basename}'
+    
+
+class RabbitMQSettings(BaseSettings):
+    """Settings for RabbitMQ connection"""
+    host: str = Field(default='rabbitmq', description='RabbitMQ host')
+    port: int = Field(default=5672, description='RabbitMQ port')
+    user: str = Field(default='admin', description='RabbitMQ user')
+    password: str = Field(default='password', description='RabbitMQ password')
+
+    @property
+    def url(self) -> str:
+        return f'amqp://{self.user}:{self.password}@{self.host}:{self.port}//'
 
 
 class AppSettings(BaseSettings):
@@ -32,6 +44,7 @@ class AppSettings(BaseSettings):
     polling_mode: bool = Field(default=True, description='Enable polling mode instead of webhook')
     telegram: TelegramBotSettings = Field(default_factory=TelegramBotSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    rabbitmq: RabbitMQSettings = Field(default_factory=RabbitMQSettings)
 
     @property
     def timezone_zoneinfo(self) -> ZoneInfo:
