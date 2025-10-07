@@ -85,8 +85,8 @@ flowchart TD
 1. Make sure you have [Docker](https://www.docker.com/get-started) installed on your machine.
 2. Clone the repository:
     ```sh
-    git clone https://github.com/VMSTR8/telegramBot_n8n.git
-    cd telegramBot_n8n
+    git clone https://github.com/VMSTR8/telegram-n8n-bot.git
+    cd telegram-n8n-bot
     ```
 3. Create a `.env` file based on the `env.example` template:
     ```sh
@@ -98,7 +98,7 @@ flowchart TD
     ```
 5. Start the project using Docker:
     ```sh
-    make dev-up
+    make up
     ```
 
 > You can view all available commands using **make help**
