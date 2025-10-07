@@ -95,7 +95,7 @@ class SystemHandlers:
         if not user_exists:
             await self.message_queue_service.send_message(
                 chat_id=chat.id,
-                text=f'Добро пожаловать в чат, {user.full_name}!\n\n'
+                text=f'Добро пожаловать в чат, {user.full_name.replace('_', r'\_')}!\n\n'
                      f'Вы еще не зарегистрированы в боте, поэтому вам необходимо '
                      f'пройти регистрацию, используя команду:\n\n'
                      f'`/reg позывной`\n\n'
@@ -130,7 +130,7 @@ class SystemHandlers:
         user, chat, bot, user_exists = result
 
         if not user_exists:
-            text = f'{user.full_name} удален(а) из чата.'
+            text = f'{user.full_name.replace('_', r'\_')} удален(а) из чата.'
         else:
             text = f'`{user_exists.callsign.capitalize()}` удален(а) из чата.'
 
