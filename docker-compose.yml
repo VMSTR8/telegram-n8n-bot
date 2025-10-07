@@ -187,7 +187,7 @@ services:
       - WEBHOOK_URL=${N8N_WEBHOOK_URL}
       - N8N_HOST=${N8N_WEBHOOK_DOMAIN}
       - N8N_PORT=5678
-      - N8N_PROTOCOL=https
+      - N8N_PROTOCOL=http
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
       - TZ=${TIMEZONE}
     depends_on:
