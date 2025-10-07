@@ -137,7 +137,7 @@ class UserHandlers:
                      f'Позывной: {user.callsign.capitalize()}\n'
                      f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
                      f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
-                     f'Username: {f'@{user.username}' if user.username else 'Username не указан'}',
+                     f'Username: {f'@{user.username.replace('_', r'\_')}' if user.username else 'Username не указан'}',
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
@@ -226,7 +226,7 @@ class UserHandlers:
             f'🆔 Позывной: `{user.callsign.capitalize()}`\n'
             f'👤 Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
             f'👥 Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
-            f'🔗 Username: {f'@{user.username}' if user.username else 'Не указан'}\n'
+            f'🔗 Username: {f'@{user.username.replace('_', r'\_')}' if user.username else 'Не указан'}\n'
             f'📅 Зарегистрирован: '
             f'{user.created_at.astimezone(tz=self.tz).strftime(self._datetime_format)}\n'
             f'🔄 Профиль обновлён: '
@@ -276,5 +276,6 @@ class UserHandlers:
             chat_id=message.chat.id,
             text=surveys_text,
             parse_mode='Markdown',
+            disable_web_page_preview=True,
             message_id=message.message_id
         )
