@@ -9,12 +9,12 @@ class Survey(Model):
     id = fields.IntField(pk=True)
     google_form_id = fields.CharField(max_length=255, unique=True, description='Google Form ID')
     title = fields.CharField(max_length=255, description='Survey title')
-    description = fields.TextField(null=True, description='Survey description')
     form_url = fields.CharField(max_length=512, description='Google Form URL')
 
-    is_sent = fields.BooleanField(default=False, description='Send status to users')
     created_at = fields.DatetimeField(auto_now_add=True, description='Date and time of survey creation')
     ended_at = fields.DatetimeField(description='Date and time of survey completion')
+
+    expired = fields.BooleanField(default=False, description='Is the survey expired')
 
     class Meta:
         table = "surveys"
