@@ -2,6 +2,9 @@ import logging
 import asyncio
 from typing import Dict, Any, List
 
+from asyncio import TimeoutError
+from aiohttp import ClientConnectionError, ClientError
+
 from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter, TelegramAPIError
 from aiogram.types import Message
@@ -64,6 +67,20 @@ def send_telegram_message(
 
         # Retry task after retry_after seconds
         raise self.retry(countdown=retry_after, max_retries=5)
+    
+    except (ClientConnectionError, TimeoutError, ClientError) as e:
+        retry_count = self.request.retries
+        retry_delay = min(300, (2 ** retry_count) * 10)
+        logger.warning(
+            f'Network error for chat {chat_id}: {e}. '
+            f'Retry {retry_count + 1}/{self.max_retries} in {retry_delay}s'
+        )
+
+        if retry_count < self.max_retries:
+            raise self.retry(countdown=retry_delay, exc=e)
+        else:
+            logger.error(f'Max retries exceeded for chat {chat_id}. Network error: {e}')
+            return {'status': 'error', 'message': f'Network error after {self.max_retries} retries: {str(e)}'}
 
     except TelegramAPIError as e:
         # Other Telegram API errors
