@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -95,9 +97,8 @@ class AdminHandlers:
         )
 
     @Auth.required_admin
-    async def create_survey_command(self, message: Message) -> None:
-        # TODO: Here comes the implementation of the create_survey_command
-        # TODO: It need to communicate with Google API, so I'll do it later
+    async def create_survey_command(self, message: Message, title: str, ended_at: datetime) -> None:
+        # TODO: Implement survey creation logic via sending JSON to n8n webhook
         pass
 
     @Auth.required_admin
