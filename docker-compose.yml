@@ -56,6 +56,24 @@ services:
     restart: unless-stopped
     networks:
       - traefik-network
+  
+  create-n8n_db:
+    image: postgres:15
+    container_name: create_n8n_db
+    environment:
+      - POSTGRES_USER=${DATABASE__USER}
+      - POSTGRES_PASSWORD=${DATABASE__PASSWORD}
+      - POSTGRES_DB=${DATABASE__BASENAME}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./init-scripts:/init-scripts
+    command: sh /init-scripts/create_n8n_db.sh
+    profiles: [ production ]
+    restart: "no"
+    networks:
+      - traefik-network
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -153,40 +171,45 @@ services:
     networks:
       - traefik-network
   
-  # n8n:
-  #   image: docker.n8n.io/n8nio/n8n
-  #   container_name: n8n
-  #   environment:
-  #     - DB_TYPE=postgresdb
-  #     - DATABASE__HOST=${DATABASE__HOST}
-  #     - DATABASE__PORT=${DATABASE__PORT}
-  #     - DATABASE__USER=${DATABASE__USER}
-  #     - DATABASE___PASSWORD=${DATABASE__PASSWORD}
-  #     - DATABASE__DBNAME=
-  #     - N8N_BASIC_AUTH_ACTIVE=true
-  #     - N8N_BASIC_AUTH_USER=${N8N_USER}
-  #     - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-  #     - WEBHOOK_URL=${N8N_WEBHOOK_URL}
-  #     - N8N_HOST=${N8N_WEBHOOK_DOMAIN}
-  #     - N8N_PORT=5678
-  #     - N8N_PROTOCOL=https
-  #     - TZ=${TIMEZONE}
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./n8n_data:/home/node/.n8n
-  #   labels:
-  #     - "traefik.enable=true"
-  #     - "traefik.http.routers.n8n.rule=Host(`${N8N_WEBHOOK_DOMAIN}`)"
-  #     - "traefik.http.routers.n8n.entrypoints=websecure"
-  #     - "traefik.http.routers.n8n.tls=true"
-  #     - "traefik.http.routers.n8n.tls.certresolver=myresolver"
-  #     - "traefik.http.services.n8n.loadbalancer.server.port=5678"
-  #   profiles: [ production ]
-  #   restart: unless-stopped
-  #   networks:
-  #     - traefik-network
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${DATABASE__HOST}
+      - DB_POSTGRESDB_PORT=${DATABASE__PORT}
+      - DB_POSTGRESDB_USER=${DATABASE__USER}
+      - DB_POSTGRESDB_PASSWORD=${DATABASE__PASSWORD}
+      - DB_POSTGRESDB_DATABASE=${N8N_DBNAME}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - N8N_HOST=${N8N_WEBHOOK_DOMAIN}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - TZ=${TIMEZONE}
+    depends_on:
+      create-n8n_db:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`${N8N_WEBHOOK_DOMAIN}`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls=true"
+      - "traefik.http.routers.n8n.tls.certresolver=myresolver"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+    profiles: [ production ]
+    ports:
+      - "5678:5678"
+    restart: unless-stopped
+    networks:
+      - traefik-network
 
 # Development services (only for debugging while developing)
   postgres_dev:
@@ -236,7 +259,7 @@ volumes:
   postgres_data:
   postgres_dev_data:
   rabbitmq_data:
-  # n8n_data:
+  n8n_data:
 
 networks:
   traefik-network:
