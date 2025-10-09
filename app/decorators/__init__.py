@@ -1,7 +1,8 @@
 from .auth import AuthDecorators
-from .validate import CallsignDecorators
+from .validate import CallsignDecorators, SurveyCreationDecorators
 
 __all__ = [
     'AuthDecorators',
-    'CallsignDecorators'
+    'CallsignDecorators',
+    'SurveyCreationDecorators'
 ]
