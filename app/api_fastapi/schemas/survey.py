@@ -15,8 +15,8 @@ class SurveySchema(BaseModel):
     expired: bool = False
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "id": 1,
                 "google_form_id": "1FAIpQLSfD2...",
