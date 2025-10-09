@@ -209,7 +209,6 @@ class SurveyCreationDecorators:
 
             parts = text_after_command.rsplit(' + ', 1)
 
-
             if len(parts) != 2:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
