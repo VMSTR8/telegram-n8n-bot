@@ -33,8 +33,8 @@ class UserSchema(BaseModel):
     reserved: bool = False
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "id": 1,
                 "telegram_id": 123456789,
