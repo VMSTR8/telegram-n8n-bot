@@ -1,10 +1,14 @@
+import json
 from datetime import datetime
+
+import aiohttp
 
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
 from app.decorators import AuthDecorators as Auth
+from app.decorators import SurveyCreationDecorators as CreateSurvey
 from app.models import UserRole
 from app.services import (
     UserService,
@@ -27,6 +31,7 @@ class AdminHandlers:
         self.chat_service = ChatService()
         self.survey_service = SurveyService()
         self.message_queue_service = MessageQueueService()
+        self.n8n_secret = settings.n8n.n8n_webhook_secret
         self.tz = settings.timezone_zoneinfo
         self._register_handlers()
 
@@ -97,9 +102,47 @@ class AdminHandlers:
         )
 
     @Auth.required_admin
+    @CreateSurvey.validate_survey_create
     async def create_survey_command(self, message: Message, title: str, ended_at: datetime) -> None:
-        # TODO: Implement survey creation logic via sending JSON to n8n webhook
-        pass
+        # TODO : WORK IN PROGRESS
+        try:
+            with open('govno.json', 'r', encoding='utf-8') as file:
+                survey_template = json.load(file)
+        except Exception as e:
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text=f'❌ Не удалось загрузить шаблон опроса: {e}',
+                parse_mode='Markdown',
+                message_id=message.message_id
+            )
+            return
+
+        survey_json = json.dumps(survey_template)
+
+        if "{{title}}" not in survey_json or "{{ended_at}}" not in survey_json:
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='❌ Шаблон опроса не содержит необходимых плейсхолдеров {{title}} или {{ended_at}}.',
+                parse_mode='Markdown',
+                message_id=message.message_id
+            )
+            return
+
+        survey_json = survey_json.replace("{{title}}", title)
+        survey_json = survey_json.replace("{{ended_at}}", ended_at.strftime("%Y-%m-%d %H:%M:%S"))
+
+        survey_data = json.loads(survey_json)
+
+        headers = {
+            "Content-Type": "application/json",
+            "X-Secret": self.n8n_secret
+        }
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
+            text='⏳ Создание опроса...',
+            parse_mode='Markdown',
+            message_id=message.message_id
+        )
 
     @Auth.required_admin
     @Auth.required_not_private_chat
