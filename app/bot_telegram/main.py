@@ -26,6 +26,10 @@ class BotManager:
 
         :return: Bot: Bot instance
         """
+        if not settings.telegram.bot_token:
+            logging.error('Bot token is not set in the configuration.')
+            raise ValueError('Bot token is required to create a Bot instance.')
+
         if self.bot is None:
             self._bot = Bot(
                 token=settings.telegram.bot_token,
