@@ -144,6 +144,7 @@ services:
       - RABBITMQ__PASSWORD=${RABBITMQ__PASSWORD}
       - TZ=${TIMEZONE}
       - POLLING_MODE=${POLLING_MODE} # False for webhook mode, True for polling mode
+      - N8N_WEBHOOK_SECRET=${N8N_WEBHOOK_SECRET}
     expose:
       - "8000"
     depends_on:
