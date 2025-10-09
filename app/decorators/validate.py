@@ -158,6 +158,7 @@ class SurveyCreationDecorators:
     def __init__(self):
         self.message_queue_service = MessageQueueService()
 
+    @staticmethod
     def validate_survey_create(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         """
         Decorator for validating survey creation in the /create_survey command.
