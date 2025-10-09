@@ -24,7 +24,8 @@ class MessageQueueService:
             text: str,
             parse_mode: str = 'HTML',
             disable_web_page_preview: bool = False,
-            message_id: int = None
+            message_id: int = None,
+            message_thread_id: int = None
     ) -> Dict[str, Any]:
         """
         Add message to queue for sending.
@@ -34,12 +35,14 @@ class MessageQueueService:
         :param parse_mode: Parse mode
         :param disable_web_page_preview: Disable web page preview
         :param message_id: If provided, reply to this message ID
+        :param message_thread_id: Thread ID
         :return: Result of adding to queue
         """
         try:
             # Add task to Celery queue
             task = celery_send_telegram_message.delay(
                 chat_id=chat_id,
+                message_thread_id=message_thread_id,
                 text=text,
                 parse_mode=parse_mode,
                 disable_web_page_preview=disable_web_page_preview,
@@ -56,6 +59,57 @@ class MessageQueueService:
 
         except Exception as e:
             self.logger.error(f'Error queuing message for chat {chat_id}: {e}')
+            return {
+                'status': 'error',
+                'message': str(e),
+                'chat_id': chat_id
+            }
+    
+    async def send_and_pin_message(
+        self,
+        chat_id: int,
+        text: str,
+        parse_mode: str = 'HTML',
+        disable_web_page_preview: bool = False,
+        message_id: int = None,
+        message_thread_id: int = None,
+        disable_pin_notification: bool = False
+) -> Dict[str, Any]:
+        """
+        Add message to queue for sending and pinning.
+        
+        :param chat_id: Chat ID
+        :param text: Message text
+        :param parse_mode: Parse mode
+        :param disable_web_page_preview: Disable web page preview
+        :param message_id: If provided, reply to this message ID
+        :param message_thread_id: Thread ID
+        :param disable_pin_notification: Disable notification on pin
+        :return: Result of adding to queue
+        """
+        try:
+            from app.celery_tasks.message_tasks import send_and_pin_telegram_message
+            
+            task = send_and_pin_telegram_message.delay(
+                chat_id=chat_id,
+                message_thread_id=message_thread_id,
+                text=text,
+                parse_mode=parse_mode,
+                disable_web_page_preview=disable_web_page_preview,
+                message_id=message_id,
+                disable_pin_notification=disable_pin_notification
+            )
+
+            self.logger.info(f'Message queued for sending and pinning in chat {chat_id}, task ID: {task.id}')
+
+            return {
+                'status': 'queued',
+                'task_id': task.id,
+                'chat_id': chat_id
+            }
+
+        except Exception as e:
+            self.logger.error(f'Error queuing send-and-pin message for chat {chat_id}: {e}')
             return {
                 'status': 'error',
                 'message': str(e),
