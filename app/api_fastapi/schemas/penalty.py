@@ -13,8 +13,8 @@ class PenaltySchema(BaseModel):
     penalty_date: datetime
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "id": 1,
                 "user": 123,
