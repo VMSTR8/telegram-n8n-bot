@@ -8,7 +8,7 @@ from app.bot_telegram import (
     close_database,
     BotManager
 )
-from .webhook import webhook_router
+from .webhook import telegram_webhook_router
 from config import settings
 
 
@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             secret_token=settings.telegram.webhook_secret
         )
         logging.info(f'Webhook successfully set at: {webhook_url}')
+        app.state.bot_manager = bot_manager
     except Exception as e:
         logging.error(f'Error occurred while setting webhook: {e}')
 
@@ -47,9 +48,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # Shutdown
+    # TODO: This siece of phit does not work properly. Need to find a way to handle SIGTERM correctly.
     try:
-        bot_manager = BotManager()
-        if bot_manager.bot:
+        bot_manager = getattr(app.state, 'bot_manager', None)
+        if bot_manager and bot_manager.bot:
             await bot_manager.bot.delete_webhook(drop_pending_updates=True)
             await bot_manager.bot.session.close()
             logging.info('Webhook deleted and bot session closed.')
@@ -77,7 +79,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    app.include_router(webhook_router, tags=['webhook'])
+    app.include_router(telegram_webhook_router, tags=['webhook'])
 
     return app
 
