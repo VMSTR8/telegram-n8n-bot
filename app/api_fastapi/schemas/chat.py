@@ -12,8 +12,8 @@ class ChatSchema(BaseModel):
     thread_id: int | None
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "id": 1,
                 "telegram_id": -1001234567890,
