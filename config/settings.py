@@ -38,6 +38,11 @@ class RabbitMQSettings(BaseSettings):
         return f'amqp://{self.user}:{self.password}@{self.host}:{self.port}//'
 
 
+class N8NSettings(BaseSettings):
+    """Settings for n8n connection"""
+    n8n_webhook_secret: Optional[str] = Field(default=None, description='n8n webhook secret key')
+
+
 class AppSettings(BaseSettings):
     """Main application settings"""
     timezone: str = Field(default='Europe/Moscow', description='Application timezone', exclude=True)
@@ -45,6 +50,7 @@ class AppSettings(BaseSettings):
     telegram: TelegramBotSettings = Field(default_factory=TelegramBotSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     rabbitmq: RabbitMQSettings = Field(default_factory=RabbitMQSettings)
+    n8n: N8NSettings = Field(default_factory=N8NSettings)
 
     @property
     def timezone_zoneinfo(self) -> ZoneInfo:
