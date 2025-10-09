@@ -3,7 +3,7 @@ from .chat import ChatSchema
 from .survey import SurveySchema
 from .penalty import PenaltySchema
 from .survey_response import SurveyResponseSchema
-from .new_form import NewFormListSchema
+from .new_form import NewFormSchema
 
 __all__ = [
     "UserRole",
@@ -12,5 +12,5 @@ __all__ = [
     "SurveySchema",
     "PenaltySchema",
     "SurveyResponseSchema",
-    "NewFormListSchema"
+    "NewFormSchema",
 ]
