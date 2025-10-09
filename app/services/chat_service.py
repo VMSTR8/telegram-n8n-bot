@@ -17,6 +17,15 @@ class ChatService:
     """
 
     @staticmethod
+    async def get_bound_chat() -> Optional[Chat]:
+        """
+        Gets the currently bound chat.
+
+        :return: Optional[Chat] - Chat object or None if not found
+        """
+        return await Chat.all().first()
+    
+    @staticmethod
     async def get_chat_by_telegram_id(
             telegram_id: int
     ) -> Optional[Chat]:
