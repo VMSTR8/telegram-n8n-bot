@@ -1,6 +1,8 @@
 import json
 from datetime import datetime
 
+from types import SimpleNamespace
+
 import aiohttp
 
 from aiogram import Router
@@ -31,7 +33,11 @@ class AdminHandlers:
         self.chat_service = ChatService()
         self.survey_service = SurveyService()
         self.message_queue_service = MessageQueueService()
-        self.n8n_secret = settings.n8n.n8n_webhook_secret
+        self.n8n = SimpleNamespace(
+            url=settings.n8n.n8n_webhook_url,
+            header=settings.n8n.n8n_webhook_header,
+            secret=settings.n8n.n8n_webhook_secret
+        )
         self.tz = settings.timezone_zoneinfo
         self._register_handlers()
 
@@ -104,7 +110,7 @@ class AdminHandlers:
     @Auth.required_admin
     @CreateSurvey.validate_survey_create
     async def create_survey_command(self, message: Message, title: str, ended_at: datetime) -> None:
-        # TODO : WORK IN PROGRESS
+
         try:
             with open('govno.json', 'r', encoding='utf-8') as file:
                 survey_template = json.load(file)
@@ -119,7 +125,7 @@ class AdminHandlers:
 
         survey_json = json.dumps(survey_template)
 
-        if "{{title}}" not in survey_json or "{{ended_at}}" not in survey_json:
+        if '{{title}}' not in survey_json or '{{ended_at}}' not in survey_json:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Шаблон опроса не содержит необходимых плейсхолдеров {{title}} или {{ended_at}}.',
@@ -128,21 +134,60 @@ class AdminHandlers:
             )
             return
 
-        survey_json = survey_json.replace("{{title}}", title)
-        survey_json = survey_json.replace("{{ended_at}}", ended_at.strftime("%Y-%m-%d %H:%M:%S"))
+        survey_json = survey_json.replace('{{title}}', title)
+        survey_json = survey_json.replace('{{ended_at}}', ended_at.strftime('%Y-%m-%d %H:%M:%S'))
 
         survey_data = json.loads(survey_json)
 
         headers = {
-            "Content-Type": "application/json",
-            "X-Secret": self.n8n_secret
+            'Content-Type': 'application/json',
+            self.n8n.header: self.n8n.secret
         }
-        await self.message_queue_service.send_message(
-            chat_id=message.chat.id,
-            text='⏳ Создание опроса...',
-            parse_mode='Markdown',
-            message_id=message.message_id
-        )
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(
+                    f'{self.n8n.url}/webhook/create-google-form',
+                    json=survey_data,
+                    headers=headers,
+                ) as response:
+                    if response.status == 200:
+                        await self.message_queue_service.send_message(
+                            chat_id=message.chat.id,
+                            text='✅ Опрос успешно отправлен в n8n для создания!',
+                            parse_mode='Markdown',
+                            message_id=message.message_id
+                        )
+
+                    else:
+                        error_text = await response.text()
+                        await self.message_queue_service.send_message(
+                            chat_id=message.chat.id,
+                            text=(
+                                f'❌ Не удалось создать опрос.\n\n'
+                                f'Статус: {response.status},\nОтвет: {error_text}'
+                            ),
+                            parse_mode='Markdown',
+                            message_id=message.message_id
+                        )
+
+            except aiohttp.ClientError as e:
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
+                    text=f'❌ Ошибка при подключении к n8n: {e}',
+                    parse_mode='Markdown',
+                    message_id=message.message_id
+                )
+                return
+
+            except Exception as e:
+                await self.message_queue_service.send_message(
+                    chat_id=message.chat.id,
+                    text=f'❌ Произошла ошибка при создании опроса: {e}',
+                    parse_mode='Markdown',
+                    message_id=message.message_id
+                )
+                return
 
     @Auth.required_admin
     @Auth.required_not_private_chat
