@@ -30,8 +30,8 @@ fi
 # 3. Running main app in polling or webhook mode based on POLLING_MODE variable
 if [ "$POLLING_MODE" = "True" ]; then
 	echo "Running main.py in polling mode..."
-	python main.py
+	execpython main.py
 else
 	echo "Running main.py in webhook mode..."
-	python main.py webhook
+	exec python main.py webhook
 fi
