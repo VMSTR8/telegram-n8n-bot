@@ -1,4 +1,4 @@
-.PHONY: migrate upgrade downgrade init-db init
+.PHONY: build up down dev-up dev-down dev-build help env
 
 PRODUCTION ?= api
 DEV ?= dev
