@@ -48,7 +48,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # Shutdown
-    # TODO: This siece of phit does not work properly. Need to find a way to handle SIGTERM correctly.
     try:
         bot_manager = getattr(app.state, 'bot_manager', None)
         if bot_manager and bot_manager.bot:
@@ -57,7 +56,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             logging.info('Webhook deleted and bot session closed.')
 
         await close_database()
-        logging.info('Database connection closed successfully.')
+        logging.info('Database closed successfully.')
 
     except Exception as e:
         logging.error(f'Error occurred during shutdown: {e}')
@@ -71,7 +70,7 @@ def create_app() -> FastAPI:
     """
     app = FastAPI(
         title='Telegram Bot with n8n integration',
-        description='API для управления Telegram ботом с интеграцией n8n',
+        description='A FastAPI application that integrates a Telegram bot with n8n workflow automation.',
         version='1.0.0',
         docs_url='/docs',
         redoc_url='/redoc',
