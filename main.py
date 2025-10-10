@@ -21,7 +21,7 @@ async def main() -> None:
 
     logging.info('Starting application in development mode...')
 
-    bot = BotManager()
+    bot: BotManager = BotManager()
 
     await init_database()
     logging.info('Database initialized successfully.')
