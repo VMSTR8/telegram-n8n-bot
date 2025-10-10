@@ -7,18 +7,18 @@ from aiogram.client.default import DefaultBotProperties
 from config import settings
 from app.handlers import UserHandlers, AdminHandlers, SystemHandlers
 from app.services import UserService
-from app.models import UserRole
+from app.models import UserRole, User
 
 
 class BotManager:
     """
     Class to manage the Telegram bot and its dispatcher.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         self._bot: Optional[Bot] = None
         self._dispatcher: Optional[Dispatcher] = None
-        self.user_service = UserService()
-        self.creator_id = settings.telegram.creator_id
+        self.user_service: UserService = UserService()
+        self.creator_id: int = settings.telegram.creator_id
 
     def create_bot(self) -> Bot:
         """
@@ -31,7 +31,7 @@ class BotManager:
             raise ValueError('Bot token is required to create a Bot instance.')
 
         if self.bot is None:
-            self._bot = Bot(
+            self._bot: Bot = Bot(
                 token=settings.telegram.bot_token,
                 default=DefaultBotProperties(parse_mode='HTML')
             )
@@ -46,11 +46,11 @@ class BotManager:
         :return: Dispatcher: Dispatcher instance
         """
         if self._dispatcher is None:
-            self._dispatcher = Dispatcher()
+            self._dispatcher: Dispatcher = Dispatcher()
 
-            user_handlers = UserHandlers()
-            admin_handlers = AdminHandlers()
-            system_handlers = SystemHandlers()
+            user_handlers: UserHandlers = UserHandlers()
+            admin_handlers: AdminHandlers = AdminHandlers()
+            system_handlers: SystemHandlers = SystemHandlers()
 
             self._dispatcher.include_router(user_handlers.router)
             self._dispatcher.include_router(admin_handlers.router)
@@ -66,9 +66,9 @@ class BotManager:
 
         :return: None
         """
-        creator = await self.user_service.get_user_by_telegram_id(self.creator_id)
+        creator: Optional[User] = await self.user_service.get_user_by_telegram_id(self.creator_id)
         if creator is None:
-            creator = await self.user_service.create_user(
+            creator: User = await self.user_service.create_user(
                 telegram_id=self.creator_id,
                 callsign='creator',
                 role=UserRole.CREATOR
@@ -101,8 +101,8 @@ class BotManager:
 
         :return: None
         """
-        bot = self.create_bot()
-        dp = self.create_dispatcher()
+        bot: Bot = self.create_bot()
+        dp: Dispatcher = self.create_dispatcher()
         try:
             logging.info('Starting bot in polling mode...')
             await dp.start_polling(bot)
