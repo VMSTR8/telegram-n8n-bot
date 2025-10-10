@@ -91,7 +91,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    profiles: [ production ]
+    profiles: [ production, development ]
     restart: unless-stopped
     networks:
       - traefik-network
@@ -120,7 +120,7 @@ services:
         condition: service_healthy
     volumes:
       - ./logs:/app/logs
-    profiles: [ production ]
+    profiles: [ production, development ]
     restart: unless-stopped
     networks:
       - traefik-network
@@ -144,7 +144,9 @@ services:
       - RABBITMQ__PASSWORD=${RABBITMQ__PASSWORD}
       - TZ=${TIMEZONE}
       - POLLING_MODE=${POLLING_MODE} # False for webhook mode, True for polling mode
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
       - N8N_WEBHOOK_SECRET=${N8N_WEBHOOK_SECRET}
+      - N8N_WEBHOOK_HEADER=${N8N_WEBHOOK_HEADER}
     expose:
       - "8000"
     depends_on:
