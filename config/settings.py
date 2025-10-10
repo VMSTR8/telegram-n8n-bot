@@ -40,6 +40,8 @@ class RabbitMQSettings(BaseSettings):
 
 class N8NSettings(BaseSettings):
     """Settings for n8n connection"""
+    n8n_webhook_url: Optional[str] = Field(default=None, description='n8n webhook URL')
+    n8n_webhook_header: Optional[str] = Field(default=None, description='n8n webhook header key')
     n8n_webhook_secret: Optional[str] = Field(default=None, description='n8n webhook secret key')
 
 
