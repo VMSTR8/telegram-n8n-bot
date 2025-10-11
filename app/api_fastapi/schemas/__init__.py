@@ -6,11 +6,11 @@ from .survey_response import SurveyResponseSchema
 from .new_form import NewFormSchema
 
 __all__ = [
-    "UserRole",
-    "UserSchema",
-    "ChatSchema",
-    "SurveySchema",
-    "PenaltySchema",
-    "SurveyResponseSchema",
-    "NewFormSchema",
+    'UserRole',
+    'UserSchema',
+    'ChatSchema',
+    'SurveySchema',
+    'PenaltySchema',
+    'SurveyResponseSchema',
+    'NewFormSchema',
 ]
