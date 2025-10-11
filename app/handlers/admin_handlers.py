@@ -1,6 +1,8 @@
 import json
 from datetime import datetime
 
+from typing import Optional, Dict, Any
+
 from types import SimpleNamespace
 
 import aiohttp
@@ -11,13 +13,14 @@ from aiogram.types import Message
 
 from app.decorators import AuthDecorators as Auth
 from app.decorators import SurveyCreationDecorators as CreateSurvey
-from app.models import UserRole
+from app.models import UserRole, User, Chat, SurveyTemplate
 from app.services import (
     UserService,
     ChatService,
     ChatAlreadyBoundError,
     SurveyService,
-    MessageQueueService
+    MessageQueueService,
+    SurveyTemplateService
 )
 from config.settings import settings
 
@@ -27,18 +30,19 @@ class AdminHandlers:
     Class to handle admin-related commands and interactions.
     """
 
-    def __init__(self):
-        self.router = Router()
-        self.user_service = UserService()
-        self.chat_service = ChatService()
-        self.survey_service = SurveyService()
-        self.message_queue_service = MessageQueueService()
-        self.n8n = SimpleNamespace(
+    def __init__(self) -> None:
+        self.router: Router = Router()
+        self.user_service: UserService = UserService()
+        self.chat_service: ChatService = ChatService()
+        self.survey_service: SurveyService = SurveyService()
+        self.message_queue_service: MessageQueueService = MessageQueueService()
+        self.survey_template_service: SurveyTemplateService = SurveyTemplateService()
+        self.n8n: SimpleNamespace = SimpleNamespace(
             url=settings.n8n.n8n_webhook_url,
             header=settings.n8n.n8n_webhook_header,
             secret=settings.n8n.n8n_webhook_secret
         )
-        self.tz = settings.timezone_zoneinfo
+        self.tz: str = settings.timezone_zoneinfo
         self._register_handlers()
 
     def _register_handlers(self) -> None:
@@ -72,7 +76,8 @@ class AdminHandlers:
         :param message: Message - incoming message from the user
         :return: None
         """
-        args = message.text.split(maxsplit=1)
+        args: list[str] = message.text.split(maxsplit=1)
+        
         if len(args) < 2 or not args[1].strip():
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
@@ -83,10 +88,11 @@ class AdminHandlers:
             )
             return
 
-        callsign = args[1].strip()
-        callsign = callsign.lower()
+        callsign: str = args[1].strip()
+        callsign: str = callsign.lower()
 
-        user = await self.user_service.get_user_by_callsign(callsign=callsign)
+        user: Optional[User] = \
+            await self.user_service.get_user_by_callsign(callsign=callsign)
 
         if not user:
             await self.message_queue_service.send_message(
@@ -110,20 +116,28 @@ class AdminHandlers:
     @Auth.required_admin
     @CreateSurvey.validate_survey_create
     async def create_survey_command(self, message: Message, title: str, ended_at: datetime) -> None:
+        """
+        Command handler for /create_survey.
+        Creates a new survey using a default template and sends it to n8n.
+        
+        :param message: Message - incoming message from the user
+        :param title: str - title of the survey
+        :param ended_at: datetime - end time of the survey
+        :return: None
+        """
+        survey_template_obj: Optional[SurveyTemplate] = \
+            await self.survey_template_service.get_survey_template_by_name('default')
 
-        try:
-            with open('govno.json', 'r', encoding='utf-8') as file:
-                survey_template = json.load(file)
-        except Exception as e:
+        if not survey_template_obj:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
-                text=f'❌ Не удалось загрузить шаблон опроса: {e}',
+                text='❌ Шаблон опроса не найден в базе данных.',
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
             return
 
-        survey_json = json.dumps(survey_template)
+        survey_json: str = json.dumps(survey_template_obj.json_content)
 
         if '{{title}}' not in survey_json or '{{ended_at}}' not in survey_json:
             await self.message_queue_service.send_message(
@@ -134,12 +148,12 @@ class AdminHandlers:
             )
             return
 
-        survey_json = survey_json.replace('{{title}}', title)
-        survey_json = survey_json.replace('{{ended_at}}', ended_at.strftime('%Y-%m-%d %H:%M:%S'))
+        survey_json: str = survey_json.replace('{{title}}', title)
+        survey_json: str = survey_json.replace('{{ended_at}}', ended_at.strftime('%Y-%m-%d %H:%M:%S'))
 
-        survey_data = json.loads(survey_json)
+        survey_data: Dict[str, Any] = json.loads(survey_json)
 
-        headers = {
+        headers: Dict[str, str] = {
             'Content-Type': 'application/json',
             self.n8n.header: self.n8n.secret
         }
@@ -230,7 +244,8 @@ class AdminHandlers:
         :param message: Message - incoming message from the user
         :return: None
         """
-        is_unbound = await self.chat_service.unbind_chat(telegram_id=message.chat.id)
+        is_unbound: bool = await self.chat_service.unbind_chat(telegram_id=message.chat.id)
+        
         if is_unbound:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
@@ -256,7 +271,8 @@ class AdminHandlers:
         :param message: Message - incoming message from the user
         :return: None
         """
-        chat = await self.chat_service.get_chat_by_telegram_id(message.chat.id)
+        chat: Optional[Chat] = await self.chat_service.get_chat_by_telegram_id(message.chat.id)
+        
         if not chat:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
@@ -266,7 +282,8 @@ class AdminHandlers:
             )
             return
 
-        thread_id = message.message_thread_id
+        thread_id: Optional[int] = message.message_thread_id
+        
         if not thread_id:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
@@ -298,7 +315,8 @@ class AdminHandlers:
         :param message: Message - incoming message from the user
         :return: None
         """
-        chat = await self.chat_service.get_chat_by_telegram_id(message.chat.id)
+        chat: Optional[Chat] = await self.chat_service.get_chat_by_telegram_id(message.chat.id)
+        
         if not chat:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
@@ -327,7 +345,8 @@ class AdminHandlers:
         :param message: Message - incoming message from the user
         :return: None
         """
-        args = message.text.split(maxsplit=1)
+        args: list[str] = message.text.split(maxsplit=1)
+        
         if len(args) < 2 or not args[1].strip():
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
@@ -338,7 +357,8 @@ class AdminHandlers:
             )
             return
 
-        user = await self.user_service.get_user_by_callsign(args[1].strip().lower())
+        user: Optional[User] = await self.user_service.get_user_by_callsign(args[1].strip().lower())
+        
         if not user:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
@@ -386,7 +406,8 @@ class AdminHandlers:
         :param message: Message - incoming message from the user
         :return: None
         """
-        args = message.text.split(maxsplit=1)
+        args: list[str] = message.text.split(maxsplit=1)
+        
         if len(args) < 2 or not args[1].strip():
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
@@ -397,7 +418,8 @@ class AdminHandlers:
             )
             return
 
-        user = await self.user_service.get_user_by_callsign(args[1].strip().lower())
+        user: Optional[User] = await self.user_service.get_user_by_callsign(args[1].strip().lower())
+        
         if not user:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
@@ -445,7 +467,7 @@ class AdminHandlers:
         :param message: Message - incoming message from the user
         :return: None
         """
-        admin_list = await self.user_service.get_users_by_role(UserRole.ADMIN)
+        admin_list: list[User] = await self.user_service.get_users_by_role(UserRole.ADMIN)
 
         if not admin_list:
             await self.message_queue_service.send_message(
@@ -456,7 +478,8 @@ class AdminHandlers:
             )
             return
 
-        admin_lines = []
+        admin_lines: list[str] = []
+        
         for idx, admin in enumerate(admin_list, 1):
             if admin.username:
                 line = f"{idx}. [{admin.callsign.capitalize()}](https://t.me/{admin.username})"
@@ -464,9 +487,10 @@ class AdminHandlers:
                 line = f"{idx}. `{admin.callsign.capitalize()}`"
             admin_lines.append(line)
 
-        MAX_MESSAGE_LENGTH = 4096
-        header = '👮‍♂️ *Список администраторов:*\n\n'
-        chunk = header
+        MAX_MESSAGE_LENGTH: int = 4096
+        header: str = '👮‍♂️ *Список администраторов:*\n\n'
+        chunk: str = header
+        
         for line in admin_lines:
             line_with_newline = line + '\n'
             if len(chunk) + len(line_with_newline) > MAX_MESSAGE_LENGTH:
