@@ -4,9 +4,10 @@ from typing import Dict, Any
 from aiogram.types import Update
 from fastapi import APIRouter, Request, HTTPException, Header
 
-from app.api_fastapi.schemas import NewFormSchema
+from app.api_fastapi.schemas import NewFormSchema, SurveyResponseSchema
 from app.bot_telegram import BotManager
 from app.services import MessageQueueService, ChatService
+
 from config import settings
 
 telegram_webhook_router = APIRouter()
@@ -91,9 +92,13 @@ class WebhookHandler:
             raise HTTPException(
                 status_code=500, detail='Internal Server Error')
 
-    async def process_n8n_webhook(self, form_data: NewFormSchema, secret_header: str) -> Dict[str, Any]:
+    async def process_new_form_data_received(
+            self, 
+            form_data: NewFormSchema, 
+            secret_header: str
+    ) -> Dict[str, Any]:
         """
-        Process incoming n8n webhook data.
+        Process new form data received from n8n and notify members.
 
         :param form_data: The new form data
         :param secret_header: Signature from the header
@@ -136,6 +141,28 @@ class WebhookHandler:
             raise HTTPException(
                 status_code=500, detail='Internal Server Error'
             )
+    
+    # async def process_survey_completion_status_received(
+    #         self,
+    #         survey_responses: SurveyResponseSchema,
+    #         secret_header: str
+    # ) -> Dict[str, Any]:
+    #     if not self._verify_n8n_secret(secret_header):
+    #         logging.error('Invalid n8n webhook signature.')
+    #         raise HTTPException(status_code=403, detail='Forbidden')
+        
+    #     return {'status': 'received', 'data': survey_responses}
+    
+    # async def process_survey_finished_received(
+    #         self,
+    #         survey_responses: SurveyResponseSchema,
+    #         secret_header: str
+    # ) -> Dict[str, Any]:
+    #     if not self._verify_n8n_secret(secret_header):
+    #         logging.error('Invalid n8n webhook signature.')
+    #         raise HTTPException(status_code=403, detail='Forbidden')
+        
+    #     return {'status': 'received', 'data': survey_responses}
 
 
 telegram_webhook_handler = WebhookHandler()
@@ -182,7 +209,7 @@ async def new_form_webhook(
     :param x_n8n_secret_token: str - signature header for verification
     :return: Dict[str, Any] - response status and data
     """
-    response = await telegram_webhook_handler.process_n8n_webhook(
+    response = await telegram_webhook_handler.process_new_form_data_received(
         form_data=form_data,
         secret_header=x_n8n_secret_token
     )
