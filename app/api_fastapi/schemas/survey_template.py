@@ -14,7 +14,7 @@ class SurveyTemplateSchema(BaseModel):
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "name": "Google Forms creation template",
+                "name": "Google Forms template",
                 "json_content":
                     {
                         "info": {
