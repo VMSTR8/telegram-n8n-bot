@@ -1,14 +1,15 @@
 import logging
-from typing import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import FastAPI
 
+from app.api_fastapi.routers import telegram_webhook_router, n8n_webhook_router
 from app.bot_telegram import (
     init_database,
     close_database,
     BotManager
 )
-from .webhook import telegram_webhook_router
 from config import settings
 
 
@@ -78,7 +79,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    app.include_router(telegram_webhook_router, tags=['webhook'])
+    app.include_router(telegram_webhook_router, tags=['telegram_webhook'])
+    app.include_router(n8n_webhook_router, tags=['n8n_webhook'])
 
     return app
 
