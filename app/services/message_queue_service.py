@@ -2,7 +2,7 @@ import logging
 from typing import Dict, Any
 
 from app.celery_app import celery_app
-from app.celery_tasks.message_tasks import (
+from app.celery_tasks.telegram_tasks import (
     send_telegram_message as celery_send_telegram_message,
     send_bulk_messages as celery_send_bulk_messages
 )
@@ -88,7 +88,7 @@ class MessageQueueService:
         :return: Result of adding to queue
         """
         try:
-            from app.celery_tasks.message_tasks import send_and_pin_telegram_message
+            from app.celery_tasks.telegram_tasks import send_and_pin_telegram_message
             
             task = send_and_pin_telegram_message.delay(
                 chat_id=chat_id,
