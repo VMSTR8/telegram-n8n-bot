@@ -31,6 +31,16 @@ class UserService:
         return await User.filter(callsign=callsign).first()
 
     @staticmethod
+    async def get_active_user_by_callsign(callsign: str) -> Optional[User]:
+        """
+        Get active user by their callsign.
+
+        :param callsign: Callsign of the user.
+        :return: User | None - user object or None if not found.
+        """
+        return await User.filter(callsign=callsign, active=True).first()
+
+    @staticmethod
     async def create_user(
             telegram_id: int,
             callsign: str,
@@ -100,6 +110,24 @@ class UserService:
         return True
 
     @staticmethod
+    async def activate_user(telegram_id: int) -> bool:
+        """
+        Activates a user.
+
+        :param telegram_id: Telegram ID of the user to activate
+        :return: bool - True if the user was successfully activated, otherwise False
+        """
+        user = await User.filter(telegram_id=telegram_id, active=False).first()
+        if not user:
+            return False
+
+        user.active = True
+        user.updated_at = datetime.now(tz=settings.timezone_zoneinfo)
+        await user.save()
+
+        return True
+
+    @staticmethod
     async def deactivate_user(telegram_id: int) -> bool:
         """
         Deactivates a user.
@@ -132,8 +160,8 @@ class UserService:
     @staticmethod
     async def get_users_without_reservation() -> List[User]:
         """
-        Get a list of users without reservations.
+        Get a list of active users without reservations.
 
-        :return: list[User] - List of users without reservations
+        :return: list[User] - List of active users without reservations
         """
         return await User.filter(reserved=False, active=True).all()
