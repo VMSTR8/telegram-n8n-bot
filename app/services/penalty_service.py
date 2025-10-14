@@ -13,8 +13,8 @@ class PenaltyService:
     """
     @staticmethod
     async def add_penalty(
-            user: int,
-            survey: int,
+            user_id: int,
+            survey_id: int,
             reason: str,
             penalty_date: datetime = datetime.now(
                 tz=settings.timezone_zoneinfo
@@ -23,13 +23,20 @@ class PenaltyService:
         """
         Adds a new penalty point to the user.
 
-        :param user: User id
-        :param survey: Survey id
+        :param user_id: User id
+        :param survey_id: Survey id
         :param reason: Reason for the penalty
         :param penalty_date: Date and time of the penalty (default: now)
         :return: Penalty - The created penalty point
         """
-        pass
+        penalty = Penalty(
+            user_id=user_id,
+            survey_id=survey_id,
+            reason=reason,
+            penalty_date=penalty_date
+        )
+        await penalty.save()
+        return penalty
 
     @staticmethod
     async def get_user_penalties(
