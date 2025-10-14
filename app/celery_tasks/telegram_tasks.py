@@ -2,7 +2,7 @@ import asyncio
 import logging
 from asyncio import TimeoutError
 from contextlib import asynccontextmanager
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter, TelegramAPIError
@@ -54,7 +54,7 @@ def send_telegram_message(
         disable_web_page_preview: bool = False,
         message_id: int = None,
         message_thread_id: int = None
-) -> Dict[str, Any]:
+) -> Optional[Dict[str, Any]]:
     """
     Send a message to Telegram via Celery.
     
@@ -122,7 +122,7 @@ def send_and_pin_telegram_message(
         message_id: int = None,
         message_thread_id: int = None,
         disable_pin_notification: bool = False
-) -> Dict[str, Any]:
+) -> Optional[Dict[str, Any]]:
     """
     Send a message to Telegram and pin it via Celery.
 
@@ -185,6 +185,35 @@ def send_and_pin_telegram_message(
     except Exception as e:
         # Unexpected errors
         logger.error(f'Unexpected error sending message to chat {chat_id}: {e}')
+        return {'status': 'error', 'message': str(e)}
+
+
+@celery_app.task(bind=True, max_retries=3, ignore_result=True)
+def ban_user_from_chat(self, chat_id: int, user_id: int) -> Optional[Dict[str, Any]]:
+    try:
+        async def _ban_user():
+            async with bot_context() as bot:
+                await bot.ban_chat_member(chat_id=chat_id, user_id=user_id)
+                logger.info(f'User {user_id} banned from chat {chat_id}')
+
+        asyncio.run(_ban_user())
+        return {'status': 'success', 'detail': f'User {user_id} banned from chat {chat_id}'}
+
+    except (ClientConnectionError, TimeoutError, ClientError) as e:
+        return _handle_network_error(self, chat_id, e)
+
+    except TelegramAPIError as e:
+        error_message = str(e)
+        if any(
+                keyword in error_message.lower() for keyword in [
+                    'cannot connect', 'connection', 'timeout', 'network'
+                ]
+        ):
+            logger.warning(f'Telegram API error for chat {chat_id}: {e}')
+            return _handle_network_error(self, chat_id, ClientConnectionError(error_message))
+
+    except Exception as e:
+        logger.error(f'Error banning user {user_id} from chat {chat_id}: {e}')
         return {'status': 'error', 'message': str(e)}
 
 
