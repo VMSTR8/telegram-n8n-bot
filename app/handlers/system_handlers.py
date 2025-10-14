@@ -4,6 +4,8 @@ from aiogram import Router
 from aiogram.filters import ChatMemberUpdatedFilter, IS_MEMBER, IS_NOT_MEMBER
 from aiogram.types import ChatMemberUpdated
 
+from app.models import UserRole
+
 from app.services import UserService, ChatService, MessageQueueService
 
 
@@ -37,9 +39,11 @@ class SystemHandlers:
                 member_status_changed=IS_MEMBER >> IS_NOT_MEMBER)
         )
 
-    async def _extract_event_context(self, event: ChatMemberUpdated, is_join: bool = True) -> Optional[
-        Tuple[Any, Any, Any, Any]
-    ]:
+    async def _extract_event_context(
+            self,
+            event: ChatMemberUpdated,
+            is_join: bool = True
+    ) -> Optional[Tuple[Any, Any, Any, Any]]:
         """
         Extract user, chat, bot, and user existence from the event.
 
@@ -75,6 +79,9 @@ class SystemHandlers:
         user, chat, bot, user_exists = result
 
         if user_exists:
+            # Reactivate user if they were previously deactivated
+            # This can happen if they left/banned and rejoined the chat
+            await self.user_service.activate_user(user.id)
             await self.message_queue_service.send_message(
                 chat_id=chat.id,
                 text=f'Добро пожаловать в чат, {user_exists.callsign.capitalize()}!\n\n'
@@ -135,6 +142,7 @@ class SystemHandlers:
             text = f'`{user_exists.callsign.capitalize()}` удален(а) из чата.'
 
         await self.user_service.deactivate_user(user.id)
+        await self.user_service.set_user_role(user.telegram_id, UserRole.USER)
 
         await self.message_queue_service.send_message(
             chat_id=chat.id,
