@@ -20,7 +20,7 @@ class FastAPIValidate:
             error_detail: str = 'Forbidden'
     ):
         """
-        Decorator to validate a specific header against a secret value.
+        Decorator factory to validate a specific header against a secret value.
 
         :param header_name: str - the name of the header to validate.
         :param secret: Optional[str] - the secret value to compare against.
