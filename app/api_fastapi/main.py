@@ -4,6 +4,8 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
+from aiogram import Bot
+
 from app.api_fastapi.routers import telegram_webhook_router, n8n_webhook_router
 from app.bot_telegram import (
     init_database,
@@ -31,16 +33,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         raise
 
     try:
-        bot_manager = BotManager()
+        bot_manager: BotManager = BotManager()
         await bot_manager.ensure_creator_exists()
-        bot = bot_manager.create_bot()
-        webhook_url = f'{settings.telegram.webhook_url}/webhook'
+        
+        bot: Bot = bot_manager.create_bot()
+        
+        webhook_url: str = f'{settings.telegram.webhook_url}/webhook'
         await bot.set_webhook(
             url=webhook_url,
             secret_token=settings.telegram.webhook_secret
         )
         logging.info(f'Webhook successfully set at: {webhook_url}')
+
         app.state.bot_manager = bot_manager
+
     except Exception as e:
         logging.error(f'Error occurred while setting webhook: {e}')
 
@@ -50,7 +56,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     try:
-        bot_manager = getattr(app.state, 'bot_manager', None)
+        bot_manager: BotManager = getattr(app.state, 'bot_manager', None)
+        
         if bot_manager and bot_manager.bot:
             await bot_manager.bot.delete_webhook(drop_pending_updates=True)
             await bot_manager.bot.session.close()
@@ -69,7 +76,7 @@ def create_app() -> FastAPI:
 
     :return: FastAPI - FastAPI application instance.
     """
-    app = FastAPI(
+    app: FastAPI = FastAPI(
         title='Telegram Bot with n8n integration',
         description='A FastAPI application that integrates a Telegram bot with n8n workflow automation.',
         version='1.0.0',
@@ -85,4 +92,4 @@ def create_app() -> FastAPI:
     return app
 
 
-telegrambot_app = create_app()
+telegrambot_app: FastAPI = create_app()
