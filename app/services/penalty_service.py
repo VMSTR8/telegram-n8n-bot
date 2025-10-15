@@ -76,6 +76,16 @@ class PenaltyService:
             'telegram_id', 'username', 'callsign', 'penalty_count'
         )
         return users
+    
+    @staticmethod
+    async def delete_user_penalties(user: User) -> None:
+        """
+        Deletes all penalty points for a specific user.
+
+        :param user: User (User)
+        :return: None - All penalty points for the user are deleted
+        """
+        await Penalty.filter(user=user).delete()
 
     @staticmethod
     async def delete_all_penalties() -> None:
