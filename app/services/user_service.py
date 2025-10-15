@@ -31,14 +31,14 @@ class UserService:
         return await User.filter(callsign=callsign).first()
 
     @staticmethod
-    async def get_active_not_creator_user_by_callsign(callsign: str) -> Optional[User]:
+    async def get_active_user_by_callsign_exclude_creator(callsign: str) -> Optional[User]:
         """
         Get active user by their callsign excluding creators.
 
         :param callsign: Callsign of the user.
         :return: User | None - user object or None if not found.
         """
-        return await User.filter(callsign=callsign, active=True, is_creator=False).first()
+        return await User.filter(callsign=callsign, active=True, role__not=UserRole.CREATOR).first()
 
     @staticmethod
     async def create_user(
@@ -158,7 +158,7 @@ class UserService:
         return await User.filter(role=role, active=True).all()
 
     @staticmethod
-    async def get_users_without_reservation() -> List[User]:
+    async def get_users_without_reservation_exclude_creators() -> List[User]:
         """
         Get a list of active users without reservations.
         Creators are excluded from this list.
