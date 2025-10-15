@@ -1,45 +1,56 @@
 import logging
 from functools import wraps
-from typing import Callable, Any, Optional, Awaitable
+from typing import Callable, Awaitable, TypeVar
 
 from fastapi import HTTPException, Request
 
 from config import settings
 
+T = TypeVar('T')
+
 
 class FastAPIValidate:
     """
     A class containing decorators for validating FastAPI requests.
+
+    Methods:
+        validate_header_secret: Decorator to validate a specific header against a secret value.
     """
 
     @staticmethod
     def validate_header_secret(
             header_name: str = 'X-Telegram-Bot-Api-Secret-Token',
-            secret: Optional[str] = settings.telegram.webhook_secret,
+            secret: str | None = settings.telegram.webhook_secret,
             error_status_code: int = 403,
             error_detail: str = 'Forbidden'
-    ):
+    ) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
         """
         Decorator factory to validate a specific header against a secret value.
 
-        :param header_name: str - the name of the header to validate.
-        :param secret: Optional[str] - the secret value to compare against.
-        :param error_status_code: int - HTTP status code to return on failure.
-        :param error_detail: str - detail message for the HTTP exception.
-        :return: Callable - the decorator function.
+        Args:
+            header_name: The name of the header to validate.
+            secret: The expected secret value to compare against.
+            error_status_code: The HTTP status code to return on validation failure.
+            error_detail: The detail message to return on validation failure.
+        
+        Returns:
+            A decorator that can be applied to FastAPI route handler functions.
         """
 
-        def decorator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+        def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
             """
             The actual decorator function.
             
-            :param func: Callable[..., Awaitable[Any]] - the function to decorate.
-            :return: Callable[..., Awaitable[Any]] - the wrapped function.
+            Args:
+                func: The function to be decorated.
+            
+            Returns:
+                The wrapped asynchronous function with the same arguments as the original function.
             """
 
             @wraps(func)
-            async def wrapper(*args, request: Request, **kwargs) -> Any:
-                secret_header = request.headers.get(header_name)
+            async def wrapper(*args, request: Request, **kwargs) -> T:
+                secret_header: str | None = request.headers.get(header_name)
 
                 if not secret or not secret_header:
                     logging.error('Verifying webhook signature failed.')
