@@ -1,10 +1,12 @@
 import logging
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
+from app.models import User, Survey
 from app.decorators import AuthDecorators as Auth
 from app.decorators import CallsignDecorators as Callsign
 from app.services import UserService, ChatService, SurveyService, MessageQueueService
@@ -14,23 +16,42 @@ from config.settings import settings
 class UserHandlers:
     """
     Class to handle user-related commands and interactions.
+
+    Attributes:
+        router (Router): The router to register handlers.
+        user_service (UserService): Service for user-related operations.
+        chat_service (ChatService): Service for chat-related operations.
+        survey_service (SurveyService): Service for survey-related operations.
+        message_queue_service (MessageQueueService): Service for sending messages.
+        tz (timezone): Timezone information from settings.
+        _datetime_format (str): Format string for displaying dates and times.
+    
+    Methods:
+        _register_handlers(): Registers command handlers in the router.
+        start_command(message): Handles the /start command.
+        help_command(message): Handles the /help command.
+        register_command(message, callsign): Handles the /reg command for user registration.
+        update_command(message): Handles the /update command for updating user profile.
+        profile_command(message): Handles the /profile command to show user profile.
+        surveys_command(message): Handles the /surveys command to list active surveys.
     """
 
     def __init__(self):
-        self.router = Router()
-        self.user_service = UserService()
-        self.chat_service = ChatService()
-        self.survey_service = SurveyService()
-        self.message_queue_service = MessageQueueService()
-        self.tz = settings.timezone_zoneinfo
-        self._datetime_format = '%d.%m.%Y %H:%M'
+        self.router: Router = Router()
+        self.user_service: UserService = UserService()
+        self.chat_service: ChatService = ChatService()
+        self.survey_service: SurveyService = SurveyService()
+        self.message_queue_service: MessageQueueService = MessageQueueService()
+        self.tz: ZoneInfo = settings.timezone_zoneinfo
+        self._datetime_format: str = '%d.%m.%Y %H:%M'
         self._register_handlers()
 
     def _register_handlers(self) -> None:
         """
         Registers command handlers in the router.
 
-        :return: None
+        Returns:
+            None
         """
         self.router.message(CommandStart())(self.start_command)
         self.router.message(Command('help'))(self.help_command)
@@ -43,10 +64,13 @@ class UserHandlers:
         """
         Command handler for /start. Sends a welcome message and instructions.
 
-        :param message: Message - incoming message from the user
-        :return: None
+        Args:
+            message (Message): Incoming message from the user.
+        
+        Returns:
+            None
         """
-        start_text = (
+        start_text: str = (
             '🚀 _"Стартуем!"_\n\n'
             '👋 Добро пожаловать в бот управления опросами!\n\n'
             'Для начала работы зарегистрируйтесь командой:\n'
@@ -67,10 +91,13 @@ class UserHandlers:
         """
         Command handler for /help. Sends a list of available commands.
 
-        :param message: Message - incoming message from the user
-        :return: None
+        Args:
+            message (Message): Incoming message from the user.
+
+        Returns:
+            None
         """
-        help_text = (
+        help_text: str = (
             '📋 Доступные команды:\n\n'
             '👤 Пользователь:\n'
             '• `/reg позывной` - Регистрация в системе\n'
@@ -104,12 +131,15 @@ class UserHandlers:
         """
         Command handler for /reg. Registers a new user with the provided callsign.
 
-        :param message: Message - incoming message from the user
-        :param callsign: str - user's callsign
-        :return: None
+        Args:
+            message (Message): Incoming message from the user.
+            callsign (str): The callsign provided by the user for registration.
+        
+        Returns:
+            None
         """
         try:
-            user_exists = await self.user_service.get_user_by_telegram_id(message.from_user.id)
+            user_exists: User | None = await self.user_service.get_user_by_telegram_id(message.from_user.id)
             if user_exists:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -120,7 +150,7 @@ class UserHandlers:
                 )
                 return
 
-            user = await self.user_service.create_user(
+            user: User = await self.user_service.create_user(
                 telegram_id=message.from_user.id,
                 callsign=callsign.lower(),
                 first_name=(message.from_user.first_name.lower()
@@ -165,13 +195,16 @@ class UserHandlers:
         Command handler for /update. Updates the user's profile information.
         If a callsign is provided, updates it as well.
 
-        :param message: Message - incoming message from the user
-        :return: None
+        Args:
+            message (Message): Incoming message from the user.
+
+        Returns:
+            None
         """
         try:
-            data = {}
+            data: dict[str, str | None] = {}
 
-            user = await self.user_service.get_user_by_telegram_id(message.from_user.id)
+            user: User = await self.user_service.get_user_by_telegram_id(message.from_user.id)
 
             data['first_name'] = (message.from_user.first_name.lower()
                                   if message.from_user.first_name else None)
@@ -181,7 +214,7 @@ class UserHandlers:
                                 if message.from_user.username else None)
             data['updated_at'] = datetime.now(tz=self.tz)
 
-            args = message.text.split()
+            args: list[str] = message.text.split()
 
             if len(args) >= 2:
                 data['callsign'] = args[1].lower()
@@ -216,12 +249,15 @@ class UserHandlers:
         """
         Command handler for /profile. Sends user profile information.
 
-        :param message: Message - incoming message from the user
-        :return: None
+        Args:
+            message (Message): Incoming message from the user.
+        
+        Returns:
+            None
         """
-        user = await self.user_service.get_user_by_telegram_id(message.from_user.id)
+        user: User = await self.user_service.get_user_by_telegram_id(message.from_user.id)
 
-        profile_text = (
+        profile_text: str = (
             f'👤 *Профиль пользователя*\n\n'
             f'🆔 Позывной: `{user.callsign.capitalize()}`\n'
             f'👤 Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
@@ -251,7 +287,7 @@ class UserHandlers:
         :param message: Message - incoming message from the user
         :return: None
         """
-        active_surveys = await self.survey_service.get_active_surveys()
+        active_surveys: list[Survey] | None = await self.survey_service.get_active_surveys()
 
         if not active_surveys:
             await self.message_queue_service.send_message(
@@ -262,7 +298,7 @@ class UserHandlers:
             )
             return
 
-        surveys_text = '📋 *Активные опросы:*\n\n'
+        surveys_text: str = '📋 *Активные опросы:*\n\n'
         for survey in active_surveys:
             surveys_text += (
                 f'• *{survey.title}*\n'
