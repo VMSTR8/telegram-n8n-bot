@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Header, Depends, Request
 
@@ -23,32 +23,46 @@ from app.services import (
 )
 from config import settings
 
-n8n_webhook_router = APIRouter()
+n8n_webhook_router: APIRouter = APIRouter()
 
 
 async def _prepare_not_answered_users_object(
-        survey_service,
-        user_service,
+        survey_service: SurveyService,
+        user_service: UserService,
         survey_responses: SurveyResponseSchema
-) -> Optional[Tuple[Survey, Dict[str, Dict[str, Any]]]]:
+) -> tuple[Survey, dict[str, dict[str, Any]]]:
     """
-    Prepares the survey and not answered users object.
+    Prepares the survey and a dictionary of users who did not answer the survey.
 
-    :param survey_service: SurveyService - instance of SurveyService.
-    :param user_service: UserService - instance of UserService.
-    :param survey_responses: SurveyResponseSchema - survey responses data.
-    :return: Optional[Tuple[Survey, Dict[str, Dict[str, Any]]]] - survey and not answered users data.
+    Args:
+        survey_service (SurveyService): Instance of SurveyService to fetch survey details.
+        user_service (UserService): Instance of UserService to fetch user details.
+        survey_responses (SurveyResponseSchema): The survey responses data.
+
+    Returns:
+        A tuple containing the survey object and a dictionary
+        of users who did not answer the survey. The dictionary keys are user callsigns, and
+        the values are dictionaries with user details (telegram_id, username, first_name, last_name).
+        If all users have answered, returns an empty dictionary.
     """
+
+    # Why we don't need exception handling here?
+    # Because this function is called only if survey exists
+    # n8n sends survey_responses only if survey was created before
+    # otherwise n8n does not reach this route and does not send any data
+    # And yes, this function is called in try-except block
+
     survey: Survey = \
         await survey_service.get_survey_by_google_form_id(survey_responses.google_form_id)
 
-    answers_list: List[str] = [
+    answers_list: list[str] = [
         answer.answer.lower() for answer in survey_responses.answers
     ]
 
-    users_without_reservation: List[User] = await user_service.get_users_without_reservation()
+    users_without_reservation: list[User] = \
+        await user_service.get_users_without_reservation_exclude_creators()
 
-    callsign_to_data: Dict[str, Dict[str, Any]] = {
+    callsign_to_data: dict[str, dict[str, Any]] = {
         user.callsign: {
             'telegram_id': user.telegram_id,
             'username': user.username,
@@ -57,7 +71,7 @@ async def _prepare_not_answered_users_object(
         } for user in users_without_reservation
     }
 
-    not_answered_users: Dict[str, Dict[str, Any]] = {
+    not_answered_users: dict[str, dict[str, Any]] = {
         callsign: data for callsign, data in callsign_to_data.items()
         if callsign.lower() not in answers_list
     }
@@ -65,7 +79,7 @@ async def _prepare_not_answered_users_object(
     return survey, not_answered_users
 
 
-@n8n_webhook_router.post(path='/webhook/new-form', response_model=Dict[str, Any])
+@n8n_webhook_router.post(path='/webhook/new-form', response_model=dict[str, Any])
 @FastAPIValidate.validate_header_secret(
     header_name='X-N8N-Secret-Token',
     secret=settings.n8n.n8n_webhook_secret
@@ -79,20 +93,26 @@ async def new_form_webhook(
         ),
         chat_service: ChatService = Depends(get_chat_service),
         message_queue_service: MessageQueueService = Depends(get_message_queue_service)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Endpoint to handle incoming new form webhook from n8n.
 
-    :param request: Request - FastAPI request object containing the form data. (Unused but kept for decorator consistency)
-    :param form_data: NewFormSchema - new form data.
-    :param x_n8n_secret_token: str - n8n secret token from header. (Unused but kept for testing via docs)
-    :param chat_service: ChatService - instance of ChatService.
-    :param message_queue_service: MessageQueueService - instance of MessageQueueService.
-    :return: Dict[str, Any] - Acknowledgment of successful processing.
+    Args:
+        request: Request - FastAPI request object containing the new form data. (Unused but kept for decorator consistency)
+        form_data: NewFormSchema - new form data.
+        x_n8n_secret_token: str - n8n secret token from header. (Unused but kept for testing via docs)
+        chat_service: ChatService - instance of ChatService.
+        message_queue_service: MessageQueueService - instance of MessageQueueService.
+
+    Raises:
+        HTTPException: If no bound chat is found or if any other error occurs during processing.
+
+    Returns:
+        Acknowledgment of successful processing of the new form.
     """
     try:
-        bound_chat: Optional[Chat] = await chat_service.get_bound_chat()
-        bound_thread_id: Optional[int] = bound_chat.thread_id if bound_chat else None
+        bound_chat: Chat | None = await chat_service.get_bound_chat()
+        bound_thread_id: int | None = bound_chat.thread_id if bound_chat else None
 
         if not bound_chat:
             logging.error('No bound chat found to send the form data.')
@@ -122,7 +142,7 @@ async def new_form_webhook(
         )
 
 
-@n8n_webhook_router.post(path='/webhook/send-survey-completion-status', response_model=Dict[str, Any])
+@n8n_webhook_router.post(path='/webhook/send-survey-completion-status', response_model=dict[str, Any])
 @FastAPIValidate.validate_header_secret(
     header_name='X-N8N-Secret-Token',
     secret=settings.n8n.n8n_webhook_secret
@@ -137,21 +157,27 @@ async def survey_completion_status_webhook(
         chat_service: ChatService = Depends(get_chat_service),
         survey_service: SurveyService = Depends(get_survey_service),
         user_service: UserService = Depends(get_user_service),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Endpoint to handle incoming survey completion status webhook from n8n.
 
-    :param request: Request - FastAPI request object containing the survey responses data. (Unused but kept for decorator consistency)
-    :param survey_responses: SurveyResponseSchema - survey responses data.
-    :param x_n8n_secret_token: str - n8n secret token from header. (Unused but kept for testing via docs)
-    :param chat_service: ChatService - instance of ChatService.
-    :param survey_service: SurveyService - instance of SurveyService.
-    :param user_service: UserService - instance of UserService.
-    :return: Dict[str, Any] - Acknowledgment of successful processing.
+    Args:
+        request: Request - FastAPI request object containing the survey responses data. (Unused but kept for decorator consistency)
+        survey_responses: SurveyResponseSchema - survey responses data.
+        x_n8n_secret_token: str - n8n secret token from header. (Unused but kept for testing via docs)
+        chat_service: ChatService - instance of ChatService.
+        survey_service: SurveyService - instance of SurveyService.
+        user_service: UserService - instance of UserService.
+
+    Raises:
+        HTTPException: If no bound chat is found or if any other error occurs during processing.
+
+    Returns:
+        Acknowledgment of successful processing along with survey responses.
     """
     try:
-        bound_chat: Optional[Chat] = await chat_service.get_bound_chat()
-        bound_thread_id: Optional[int] = bound_chat.thread_id if bound_chat else None
+        bound_chat: Chat | None = await chat_service.get_bound_chat()
+        bound_thread_id: int | None = bound_chat.thread_id if bound_chat else None
 
         if not bound_chat:
             logging.error('No bound chat found to send the survey completion status.')
@@ -184,7 +210,7 @@ async def survey_completion_status_webhook(
                 f'🔗 [Перейти к опросу]({survey.form_url})'
             )
 
-            messages_to_send: List[Dict[str, Any]] = [
+            messages_to_send: list[dict[str, Any]] = [
                 {
                     'chat_id': bound_chat.telegram_id,
                     'message_thread_id': bound_thread_id,
@@ -211,7 +237,7 @@ async def survey_completion_status_webhook(
         )
 
 
-@n8n_webhook_router.post(path='/webhook/send-survey-finished', response_model=Dict[str, Any])
+@n8n_webhook_router.post(path='/webhook/send-survey-finished', response_model=dict[str, Any])
 @FastAPIValidate.validate_header_secret(
     header_name='X-N8N-Secret-Token',
     secret=settings.n8n.n8n_webhook_secret
@@ -228,24 +254,30 @@ async def send_survey_finished_webhook(
         user_service: UserService = Depends(get_user_service),
         penalty_service: PenaltyService = Depends(get_penalty_service),
         message_queue_service: MessageQueueService = Depends(get_message_queue_service)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Endpoint to handle incoming survey finished webhook from n8n.
     Also handles penalizing users who did not complete the survey and banning users with 3 penalties.
 
-    :param request: Request - FastAPI request object containing the survey responses data. (Unused but kept for decorator consistency)
-    :param survey_responses: SurveyResponseSchema - survey responses data.
-    :param x_n8n_secret_token: str - n8n secret token from header. (Unused but kept for testing via docs)
-    :param chat_service: ChatService - instance of ChatService.
-    :param survey_service: SurveyService - instance of SurveyService.
-    :param user_service: UserService - instance of UserService.
-    :param penalty_service: PenaltyService - instance of PenaltyService.
-    :param message_queue_service: MessageQueueService - instance of MessageQueueService.
-    :return: Dict[str, Any] - Acknowledgment of successful processing along with survey responses and users with three penalties.
+    Args:
+        request: Request - FastAPI request object containing the survey responses data. (Unused but kept for decorator consistency)
+        survey_responses: SurveyResponseSchema - survey responses data.
+        x_n8n_secret_token: str - n8n secret token from header. (Unused but kept for testing via docs)
+        chat_service: ChatService - instance of ChatService.
+        survey_service: SurveyService - instance of SurveyService.
+        user_service: UserService - instance of UserService.
+        penalty_service: PenaltyService - instance of PenaltyService.
+        message_queue_service: MessageQueueService - instance of MessageQueueService.
+
+    Raises:
+        HTTPException: If no bound chat is found or if any other error occurs during processing.
+
+    Returns:
+        Acknowledgment of successful processing along with survey responses and users with three penalties.
     """
     try:
-        bound_chat: Optional[Chat] = await chat_service.get_bound_chat()
-        bound_thread_id: Optional[int] = bound_chat.thread_id if bound_chat else None
+        bound_chat: Chat | None = await chat_service.get_bound_chat()
+        bound_thread_id: int | None = bound_chat.thread_id if bound_chat else None
 
         if not bound_chat:
             logging.error('No bound chat found to send the survey finished message.')
@@ -260,7 +292,8 @@ async def send_survey_finished_webhook(
         if not_answered_users:
             penalized_users_list: list[str] = []
             for callsign, data in not_answered_users.items():
-                user: Optional[User] = await user_service.get_active_not_creator_user_by_callsign(callsign)
+                user: User | None = \
+                    await user_service.get_active_user_by_callsign_exclude_creator(callsign)
                 if user:
                     await penalty_service.add_penalty(
                         user_id=user.id,
@@ -299,7 +332,8 @@ async def send_survey_finished_webhook(
                 parse_mode='Markdown'
             )
 
-        users_with_three_penalties: List[Dict[str, Any]] = await penalty_service.get_all_users_with_three_penalties()
+        users_with_three_penalties: list[dict[str, Any]] = \
+            await penalty_service.get_all_users_with_three_penalties()
 
         if users_with_three_penalties:
             for user_data in users_with_three_penalties:
