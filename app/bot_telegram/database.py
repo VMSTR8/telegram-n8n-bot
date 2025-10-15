@@ -8,7 +8,11 @@ async def init_database() -> None:
     """
     Initializes the database connection using Tortoise ORM.
 
-    :return: None
+    Raises:
+        SystemExit: If there is an error during initialization.
+
+    Returns:
+        None
     """
     try:
         await Tortoise.init(
@@ -25,9 +29,13 @@ async def init_database() -> None:
 
 async def close_database() -> None:
     """
-    Closes the database connections
-    .
-    :return: None
+    Closes the database connections.
+
+    Raises:
+        Exception: If there is an error while closing connections.
+    
+    Returns:
+        None
     """
     try:
         await Tortoise.close_connections()
