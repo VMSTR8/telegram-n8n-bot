@@ -1,0 +1,71 @@
+{
+  "name": "Delete all penalties At 02:00 on day-of-month 1 in January and June.",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 1 1,6 *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "657eaaec-96ee-4e8e-822c-426fcab2b524",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM\npenalties;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ecdbb28b-a564-4a50-8134-efc3771253d6",
+      "name": "delete from penalties;",
+      "credentials": {
+        "postgres": {
+          "id": "ahXLEZ6rtnM0sKBU",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "delete from penalties;",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "805e1f3e-c467-4760-8b4a-11416b247453",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b6c3a627dbf639be723176dbe11bee0da19ab2ae118884efc1823b5132ed3c61"
+  },
+  "id": "dT8an84HFzi48NeH",
+  "tags": []
+}
