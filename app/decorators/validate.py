@@ -1,25 +1,36 @@
 from functools import wraps
-from typing import Any, Awaitable, Callable
+from datetime import datetime
+from typing import Awaitable, Callable, TypeVar, Any
 
 from aiogram.types import Message
 
 from app.services import MessageQueueService
+from app.utils import ValidationResult
 from app.utils import validate_callsign_format, validate_datetime_format
 
 from config import settings
+
+T = TypeVar('T')
 
 
 class CallsignDecorators:
     """
     Class containing decorators for callsign validation.
     Works with methods of classes, not regular functions.
+
+    Attributes:
+        message_queue_service: Instance of MessageQueueService for sending messages.
+    
+    Methods:
+        validate_callsign_create: Decorator to validate callsign in the /reg command.
+        validate_callsign_update: Decorator to validate callsign in the /update command.
     """
 
     def __init__(self):
-        self.message_queue_service = MessageQueueService()
+        self.message_queue_service: MessageQueueService = MessageQueueService()
 
     @staticmethod
-    def validate_callsign_create(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    def validate_callsign_create(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """
         Decorator for validating callsign in the /reg command.
         Checks that the callsign meets the requirements:
@@ -29,13 +40,15 @@ class CallsignDecorators:
         - Callsign must be unique
         If the callsign is invalid, sends an error message and does not call the main function
 
-        :param func: Function to be decorated
-        :return: Wrapped asynchronous function with the same arguments 
-        as the original function
+        Args:
+            func: Function to be decorated
+        
+        Returns:
+            Wrapped asynchronous function with the same arguments as the original function
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> Any:
+        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> T:
             if not message.text:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -47,7 +60,7 @@ class CallsignDecorators:
                 )
                 return
 
-            command_parts = message.text.split()
+            command_parts: list[str] = message.text.split()
             if len(command_parts) != 2:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -65,9 +78,9 @@ class CallsignDecorators:
                 )
                 return
 
-            callsign = command_parts[1].strip()
+            callsign: str = command_parts[1].strip()
 
-            validation_result = await validate_callsign_format(callsign)
+            validation_result: ValidationResult = await validate_callsign_format(callsign)
             if not validation_result.is_valid:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -89,7 +102,7 @@ class CallsignDecorators:
         return wrapper
 
     @staticmethod
-    def validate_callsign_update(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    def validate_callsign_update(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """
         Decorator for validating callsign in the /update command.
         If a callsign is provided, checks that it meets the requirements:
@@ -99,13 +112,15 @@ class CallsignDecorators:
         - Callsign must be unique
         If the callsign is invalid, sends an error message and does not call the main function
 
-        :param func: Function to be decorated
-        :return: Wrapped asynchronous function with the same arguments 
-        as the original function
+        Args:
+            func: Function to be decorated
+
+        Returns:
+            Wrapped asynchronous function with the same arguments as the original function
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> Any:
+        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> T:
             if not message.text:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -117,13 +132,13 @@ class CallsignDecorators:
                 )
                 return
 
-            command_parts = message.text.split()
+            command_parts: list[str] = message.text.split()
 
             if len(command_parts) >= 2:
 
-                callsign = command_parts[1].strip()
+                callsign: str = command_parts[1].strip()
 
-                validation_result = await validate_callsign_format(callsign)
+                validation_result: ValidationResult = await validate_callsign_format(callsign)
 
                 if not validation_result.is_valid:
                     await self.message_queue_service.send_message(
@@ -150,13 +165,16 @@ class SurveyCreationDecorators:
     """
     Class containing decorators for survey creation validation.
     Works with methods of classes, not regular functions.
+
+    Attributes:
+        message_queue_service: Instance of MessageQueueService for sending messages.
     """
 
     def __init__(self):
-        self.message_queue_service = MessageQueueService()
+        self.message_queue_service: MessageQueueService = MessageQueueService()
 
     @staticmethod
-    def validate_survey_create(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    def validate_survey_create(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """
         Decorator for validating survey creation in the /create_survey command.
         Checks that the command parameters meet the requirements:
@@ -165,12 +183,15 @@ class SurveyCreationDecorators:
         - End date and time are in the future
         If the parameters are invalid, sends an error message and does not call the main function
 
-        :param func: Function to be decorated
-        :return: Wrapped asynchronous function with the same arguments 
-        as the original function
+        Args:
+            func: Function to be decorated
+
+        Returns:
+            Wrapped asynchronous function with the same arguments as the original function
         """
+
         @wraps(func)
-        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> Any:
+        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> T:
             if not message.text:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -184,7 +205,7 @@ class SurveyCreationDecorators:
                 )
                 return
 
-            text_after_command = message.text[len('/create_survey '):].strip()
+            text_after_command: str = message.text[len('/create_survey '):].strip()
 
             if not text_after_command:
                 await self.message_queue_service.send_message(
@@ -204,7 +225,7 @@ class SurveyCreationDecorators:
                 )
                 return
 
-            parts = text_after_command.rsplit(' + ', 1)
+            parts: list[str] = text_after_command.rsplit(' + ', 1)
 
             if len(parts) != 2:
                 await self.message_queue_service.send_message(
@@ -223,8 +244,8 @@ class SurveyCreationDecorators:
                 )
                 return
 
-            survey_name = parts[0].strip()
-            end_datetime_str = parts[1].strip()
+            survey_name: str = parts[0].strip()
+            end_datetime_str: str = parts[1].strip()
 
             if not survey_name:
                 await self.message_queue_service.send_message(
@@ -242,7 +263,7 @@ class SurveyCreationDecorators:
                 )
                 return
 
-            validation_datetime_result = await validate_datetime_format(end_datetime_str)
+            validation_datetime_result: ValidationResult = await validate_datetime_format(end_datetime_str)
 
             if not validation_datetime_result.is_valid:
                 await self.message_queue_service.send_message(
@@ -268,7 +289,7 @@ class SurveyCreationDecorators:
                 )
                 return
             
-            end_datetime = validation_datetime_result.parsed_datetime
+            end_datetime: datetime = validation_datetime_result.parsed_datetime
 
             return await func(self, message, survey_name, end_datetime, *args, **kwargs)
 
