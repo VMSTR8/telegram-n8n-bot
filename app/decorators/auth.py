@@ -1,34 +1,50 @@
 from functools import wraps
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable, TypeVar
 
 from aiogram.enums import ChatType
 from aiogram.types import Message
 
+from app.models import User, Chat
 from app.services import UserService, ChatService, MessageQueueService
+
+T = TypeVar('T')
 
 
 class AuthDecorators:
     """
     Class containing decorators for authentication checks.
+    
+    Attributes:
+        message_queue_service: Instance of MessageQueueService for sending messages.
+
+    Methods:
+        required_creator: Decorator to check if the user is the bot creator.
+        required_admin: Decorator to check if the user is an administrator or the bot creator.
+        required_user_registration: Decorator to check if the user is registered in the system.
+        required_chat_bind: Decorator to check if the command is executed in a bound chat.
+        required_not_private_chat: Decorator to check if the command is executed in a non-private chat.
     """
 
     def __init__(self):
-        self.message_queue_service = MessageQueueService()
+        self.message_queue_service: MessageQueueService = MessageQueueService()
 
     @staticmethod
-    def required_creator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    def required_creator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """
         Decorator to check if the user is the bot creator.
         If the user is not the creator, an error message is sent.
 
-        :param func: Function to be decorated.
-        :return: Wrapped asynchronous function with the same arguments as the original function.
+        Args:
+            func: Function to be decorated.
+
+        Returns:
+            Wrapped asynchronous function with the same arguments as the original function.
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args, **kwargs) -> Any:
-            user_service = UserService()
-            user = await user_service.get_user_by_telegram_id(message.from_user.id)
+        async def wrapper(self, message: Message, *args, **kwargs) -> T:
+            user_service: UserService = UserService()
+            user: User = await user_service.get_user_by_telegram_id(message.from_user.id)
 
             if not user or not user.is_creator:
                 await self.message_queue_service.send_message(
@@ -45,19 +61,22 @@ class AuthDecorators:
         return wrapper
 
     @staticmethod
-    def required_admin(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    def required_admin(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """
         Decorator to check if the user is an administrator or the bot creator.
         If the user is not an admin or creator, an error message is sent.
 
-        :param func: Function to be decorated.
-        :return: Wrapped asynchronous function with the same arguments as the original function.
+        Args:
+            func: Function to be decorated.
+
+        Returns:
+            Wrapped asynchronous function with the same arguments as the original function.
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args, **kwargs) -> Any:
-            user_service = UserService()
-            user = await user_service.get_user_by_telegram_id(message.from_user.id)
+        async def wrapper(self, message: Message, *args, **kwargs) -> T:
+            user_service: UserService = UserService()
+            user: User = await user_service.get_user_by_telegram_id(message.from_user.id)
 
             if not user or not user.is_admin:
                 await self.message_queue_service.send_message(
@@ -74,19 +93,22 @@ class AuthDecorators:
         return wrapper
 
     @staticmethod
-    def required_user_registration(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    def required_user_registration(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """
         Decorator to check if the user is registered in the system.
         If the user is not registered, an error message is sent.
 
-        :param func: Function to be decorated.
-        :return: Wrapped asynchronous function with the same arguments as the original function.
+        Args:
+            func: Function to be decorated.
+
+        Returns:
+            Wrapped asynchronous function with the same arguments as the original function.
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args, **kwargs) -> Any:
-            user_service = UserService()
-            user = await user_service.get_user_by_telegram_id(message.from_user.id)
+        async def wrapper(self, message: Message, *args, **kwargs) -> T:
+            user_service: UserService = UserService()
+            user: User = await user_service.get_user_by_telegram_id(message.from_user.id)
 
             if not user:
                 await self.message_queue_service.send_message(
@@ -104,19 +126,22 @@ class AuthDecorators:
         return wrapper
 
     @staticmethod
-    def required_chat_bind(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    def required_chat_bind(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """
         Decorator to check if the command is executed in a chat that is bound to the bot.
         If the chat is not bound, an error message is sent.
 
-        :param func: Function to be decorated.
-        :return: Wrapped asynchronous function with the same arguments as the original function.
+        Args:
+            func: Function to be decorated.
+
+        Returns:
+            Wrapped asynchronous function with the same arguments as the original function.
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args, **kwargs) -> Any:
-            chat_service = ChatService()
-            chat_exists = await chat_service.get_chat_by_telegram_id(message.chat.id)
+        async def wrapper(self, message: Message, *args, **kwargs) -> T:
+            chat_service: ChatService = ChatService()
+            chat_exists: Chat | None = await chat_service.get_chat_by_telegram_id(message.chat.id)
             if not chat_exists:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -132,16 +157,19 @@ class AuthDecorators:
         return wrapper
 
     @staticmethod
-    def required_not_private_chat(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    def required_not_private_chat(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         """
         Decorator to check if the command is executed in a chat that is not private.
 
-        :param func: Function to be decorated.
-        :return: Wrapped asynchronous function with the same arguments as the original function.
+        Args:
+            func: Function to be decorated.
+
+        Returns:
+            Wrapped asynchronous function with the same arguments as the original function.
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args, **kwargs) -> Any:
+        async def wrapper(self, message: Message, *args, **kwargs) -> T:
             if not hasattr(message, "chat") or message.chat is None:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
