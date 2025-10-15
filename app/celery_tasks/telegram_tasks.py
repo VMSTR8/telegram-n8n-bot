@@ -3,7 +3,7 @@ import logging
 import time
 from asyncio import TimeoutError
 from contextlib import asynccontextmanager
-from typing import Dict, Any, List, Optional, AsyncGenerator
+from typing import Any, AsyncGenerator
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter, TelegramAPIError
@@ -19,6 +19,18 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def bot_context() -> AsyncGenerator[Bot, None]:
+    """
+    Asynchronous context manager to create and close a Bot instance.
+
+    Yields:
+        An instance of Bot.
+    
+    Finally:
+        Closes the bot session.
+
+    Returns:
+        Instance of Bot.
+    """
     bot: Bot = Bot(token=settings.telegram.bot_token)
     try:
         yield bot
@@ -26,14 +38,20 @@ async def bot_context() -> AsyncGenerator[Bot, None]:
         await bot.session.close()
 
 
-def _handle_network_error(self, chat_id: int, e: Exception) -> Dict[str, Any]:
+def _handle_network_error(self, chat_id: int, e: Exception) -> dict[str, Any]:
     """
     Handle network-related errors with exponential backoff retries.
 
-    :param self: The task instance (for retrying)
-    :param chat_id: Chat ID for logging
-    :param e: The exception instance
-    :return: Dict[str, Any] with error status if max retries exceeded
+    Args:
+        self: The task instance.
+        chat_id: The chat ID where the error occurred.
+        e: The exception that was raised.
+    
+    Raises:
+        self.retry: Retries the task with exponential backoff.
+    
+    Returns:
+        A dictionary with error status and message.
     """
     retry_count: int = self.request.retries
     retry_delay: int = min(300, (2 ** retry_count) * 10)
@@ -57,17 +75,24 @@ def send_telegram_message(
         disable_web_page_preview: bool = False,
         message_id: int = None,
         message_thread_id: int = None
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
     Send a message to Telegram via Celery.
     
-    :param chat_id: Chat ID
-    :param text: Message text
-    :param parse_mode: Parse mode (HTML, Markdown)
-    :param disable_web_page_preview: Disable web page preview
-    :param message_id: If provided, reply to this message ID
-    :param message_thread_id: Thread ID for topics
-    :return: Sending result
+    Args:
+        self: The task instance.
+        chat_id: Chat ID
+        text: Message text
+        parse_mode: Parse mode (HTML, Markdown)
+        disable_web_page_preview: Disable web page preview
+        message_id: If provided, reply to this message ID
+        message_thread_id: Thread ID for topics
+
+    Raises:
+        self.retry: Retries the task in case of rate limiting or network errors.
+    
+    Returns:
+        A dictionary with sending status and message ID on success, or error details on failure.
     """
 
     async def _send_message():
@@ -125,18 +150,25 @@ def send_and_pin_telegram_message(
         message_id: int = None,
         message_thread_id: int = None,
         disable_pin_notification: bool = False
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
     Send a message to Telegram and pin it via Celery.
 
-    :param chat_id: Chat ID
-    :param text: Message text
-    :param parse_mode: Parse mode (HTML, Markdown)
-    :param disable_web_page_preview: Disable web page preview
-    :param message_id: If provided, reply to this message ID
-    :param message_thread_id: Thread ID for topics
-    :param disable_pin_notification: If True, disable notification when pinning
-    :return: Sending and pinning result
+    Args:
+        self: The task instance.
+        chat_id: Chat ID
+        text: Message text
+        parse_mode: Parse mode (HTML, Markdown)
+        disable_web_page_preview: Disable web page preview
+        message_id: If provided, reply to this message ID
+        message_thread_id: Thread ID for topics
+        disable_pin_notification: If True, pin without notification
+    
+    Raises:
+        self.retry: Retries the task in case of rate limiting or network errors.
+    
+    Returns:
+        A dictionary with sending and pinning status and message ID on success, or error details on failure.
     """
 
     async def _send_and_pin():
@@ -189,7 +221,21 @@ def send_and_pin_telegram_message(
 
 
 @celery_app.task(bind=True, max_retries=3, ignore_result=True)
-def ban_user_from_chat(self, chat_id: int, user_id: int) -> Optional[Dict[str, Any]]:
+def ban_user_from_chat(self, chat_id: int, user_id: int) -> dict[str, Any] | None:
+    """
+    Ban a user from a Telegram chat via Celery.
+    
+    Args:
+        self: The task instance.
+        chat_id: Chat ID
+        user_id: User ID to ban
+    
+    Raises:
+        self.retry: Retries the task in case of rate limiting or network errors.
+    
+    Returns:
+        A dictionary with banning status on success, or error details on failure.
+    """
     try:
         async def _ban_user():
             async with bot_context() as bot:
@@ -224,14 +270,24 @@ def ban_user_from_chat(self, chat_id: int, user_id: int) -> Optional[Dict[str, A
 
 
 @celery_app.task(bind=True, max_retries=3, ignore_result=True)
-def send_bulk_messages(self, messages: list) -> List[Dict[str, Any]]:
+def send_bulk_messages(self, messages: list) -> list[dict[str, Any]]:
     """
     Send multiple messages with controlled speed.
     
-    :param messages: List of messages [{'chat_id': int, 'text': str}, ...]
-    :return: Sending results
+    Args:
+        self: The task instance.
+        messages: List of message data dictionaries, each containing:
+            - chat_id: Chat ID
+            - text: Message text
+            - parse_mode: Parse mode (HTML, Markdown) [optional]
+            - disable_web_page_preview: Disable web page preview [optional]
+            - message_id: If provided, reply to this message ID [optional]
+            - message_thread_id: Thread ID for topics [optional]
+    
+    Returns:
+        A list of dictionaries with sending status for each message.
     """
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
 
     for i, message_data in enumerate(messages):
         try:
