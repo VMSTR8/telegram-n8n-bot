@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any
+from typing import Any
 
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
@@ -11,26 +11,32 @@ from app.api_fastapi.dependencies import (
 )
 from app.decorators import FastAPIValidate
 
-telegram_webhook_router = APIRouter()
+telegram_webhook_router: APIRouter = APIRouter()
 
 
-@telegram_webhook_router.post(path='/webhook', response_model=Dict[str, str])
+@telegram_webhook_router.post(path='/webhook', response_model=dict[str, str])
 @FastAPIValidate.validate_header_secret()
 async def telegram_webhook(
         request: Request,
         bot: Bot = Depends(get_bot),
         dispatcher: Dispatcher = Depends(get_dispatcher),
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Endpoint to handle incoming Telegram webhook updates.
 
-    :param request: Request - FastAPI request object containing the update data.
-    :param bot: Bot - instance of the Telegram Bot.
-    :param dispatcher: Dispatcher - instance of the Dispatcher to process updates.
-    :return: Dict[str, str] - Acknowledgment of successful processing.
+    Args:
+        request (Request): FastAPI request object containing the update data.
+        bot (Bot): Instance of the Telegram Bot.
+        dispatcher (Dispatcher): Instance of the Dispatcher to process updates.
+
+    Raises:
+        HTTPException: If there is an error processing the update.
+
+    Returns:
+        Acknowledgment of successful processing.
     """
     try:
-        update_data: Dict[str, Any] = await request.json()
+        update_data: dict[str, Any] = await request.json()
         update = Update(**update_data)
         await dispatcher.feed_update(bot, update)
         return {'status': 'ok'}
@@ -40,11 +46,12 @@ async def telegram_webhook(
         raise HTTPException(status_code=500, detail='Internal Server Error')
 
 
-@telegram_webhook_router.get(path='/webhook/health', response_model=Dict[str, str])
-async def health_check() -> Dict[str, str]:
+@telegram_webhook_router.get(path='/webhook/health', response_model=dict[str, str])
+async def health_check() -> dict[str, str]:
     """
     Health check endpoint to verify the webhook is operational.
     
-    :return: Dict[str, str] - Health status message.
+    Returns:
+        A dictionary indicating the health status of the webhook.
     """
     return {'status': 'healthy', 'message': 'Webhook is operational. Bye, have a great time!'}
