@@ -6,7 +6,7 @@ from aiogram.types import ChatMemberUpdated
 
 from app.models import UserRole
 
-from app.services import UserService, ChatService, MessageQueueService
+from app.services import UserService, ChatService, PenaltyService, MessageQueueService
 
 
 class SystemHandlers:
@@ -18,6 +18,7 @@ class SystemHandlers:
         self.router = Router()
         self.user_service = UserService()
         self.chat_service = ChatService()
+        self.penalty_service = PenaltyService()
         self.message_queue_service = MessageQueueService()
         self._register_handlers()
 
@@ -81,7 +82,10 @@ class SystemHandlers:
         if user_exists:
             # Reactivate user if they were previously deactivated
             # This can happen if they left/banned and rejoined the chat
-            await self.user_service.activate_user(user.id)
+            await self.user_service.activate_user(telegram_id=user.id)
+            # Remove all penalties upon rejoining
+            await self.penalty_service.delete_user_penalties(user=user_exists)
+            
             await self.message_queue_service.send_message(
                 chat_id=chat.id,
                 text=f'Добро пожаловать в чат, {user_exists.callsign.capitalize()}!\n\n'
@@ -141,8 +145,12 @@ class SystemHandlers:
         else:
             text = f'`{user_exists.callsign.capitalize()}` удален(а) из чата.'
 
-        await self.user_service.deactivate_user(user.id)
-        await self.user_service.set_user_role(user.telegram_id, UserRole.USER)
+        await self.user_service.deactivate_user(telegram_id=user.id)
+
+        await self.user_service.set_user_role(
+            telegram_id=user.id,
+            new_role=UserRole.USER
+        )
 
         await self.message_queue_service.send_message(
             chat_id=chat.id,
