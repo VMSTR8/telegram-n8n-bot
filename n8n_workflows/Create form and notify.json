@@ -1,0 +1,450 @@
+{
+  "name": "Create form and notify",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Create new Google Form\nCreating a new Form via POST request",
+        "height": 240,
+        "width": 400,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1184,
+        -352
+      ],
+      "typeVersion": 1,
+      "id": "c73bcf56-a289-4321-8a50-22659791cc76",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://forms.googleapis.com/v1/forms",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -928,
+        -272
+      ],
+      "id": "cc2e2cbf-1891-49a8-bb41-2fd28ebca3b5",
+      "name": "Create Form",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": true,
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "0u0ZFOiCm8VVVMVM",
+          "name": "Second!"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "create-google-form",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1136,
+        -272
+      ],
+      "id": "f42dbd6c-a18b-4124-a6d7-d0dd3d2f6469",
+      "name": "Webhook",
+      "webhookId": "93ec98bf-f438-4db4-acfe-6b4f6e31a8c9",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WFfu1UTam9Jre3t0",
+          "name": "tg to n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tg.reddawn.ru/webhook/new-form",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $input.item.json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        544,
+        -272
+      ],
+      "id": "db6f9e32-7d77-4b2f-847b-9d7c7fabc06c",
+      "name": "New Form notify",
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "we0Pc9zFTFLuktMJ",
+          "name": "n8n to tg"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "surveys",
+          "mode": "list",
+          "cachedResultName": "surveys"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "expired": false,
+            "google_form_id": "={{ $('Create Form').item.json.formId }}",
+            "title": "={{ $('Create Form').item.json.info.title }}",
+            "form_url": "={{ $('Create Form').item.json.responderUri }}",
+            "created_at": "={{ $now }}",
+            "ended_at": "={{ $('Create Form').item.json.info.documentTitle }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "google_form_id",
+              "displayName": "google_form_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "form_url",
+              "displayName": "form_url",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ended_at",
+              "displayName": "ended_at",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "expired",
+              "displayName": "expired",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        352,
+        -272
+      ],
+      "id": "9c5a39a1-01c9-484a-beaf-8cb728b00ce5",
+      "name": "Insert Form to PSQL",
+      "credentials": {
+        "postgres": {
+          "id": "ahXLEZ6rtnM0sKBU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"requests\": [\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Ваш позывной?\",\n          \"description\": \"Укажите свой позывной. Он должен совпадать с тем позывным, с которым вы зарегистрировались в чат-боте команды.\\n\\nИначе бот не учтет ваш голос и будет отмечать вас как того, кто не прошел опрос.\",\n          \"questionItem\": {\n            \"question\": {\n              \"required\": true,\n              \"textQuestion\": {}\n            }\n          }\n        },\n        \"location\": {\n          \"index\": 0\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Отметка о посещении мероприятия\",\n          \"pageBreakItem\": {}\n        },\n        \"location\": {\n          \"index\": 1\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Поставьте отметку о посещении мероприятия\",\n          \"description\": \"Выбирая 100% отметку о посещении, вы гарантируете свое присуствие на мероприятии. Форс-мажором считаются обстоятельства непреодолимой силы, такие как: вызов на работу в день мероприятия или болезнь/тяжелое состояние здоровья.\\n\\nСлив со 100% отметки без уважительной причины ведет к исключению из команды без права возврата. Все случаи индивидуальны и решение принимает командир после того, как ознакомиться с причиной пропуска мероприятия со 100% отметкой в опросе.\\n\\nЕсли вы не уверены на все 100, что сможете присуствовать на мероприятии, ставьте \\\"Не еду\\\", Заявиться всегда можно и после, но так вы не подставите себя и команду.\\n\\nTL;DR 100% = вы железно будете присутствовать и уверены в том, что никто и ничто вам не воспрепядствует в посещении мероприятия.\",\n          \"questionItem\": {\n            \"question\": {\n              \"required\": true,\n              \"choiceQuestion\": {\n                \"type\": \"RADIO\",\n                \"options\": [\n                  {\n                    \"value\": \"Еду на мероприятие 100%\"\n                  },\n                  {\n                    \"value\": \"Не еду на мероприятие\"\n                  }\n                ]\n              }\n            }\n          }\n        },\n        \"location\": {\n          \"index\": 2\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Наличие автомобиля и возможность подвезти сокомандников\",\n          \"pageBreakItem\": {}\n        },\n        \"location\": {\n          \"index\": 3\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Есть ли у вас автомобиль и могли бы вы подвезти сокомандников?\",\n          \"description\": \"Если вы выбираете, что у вас нет автомобиля, то вы обязуетесь самостоятельно разобраться со способом добора до полигона.\\n\\nЛибо вы подсядите к кому-то, у кого есть авто, либо доберетесь на общественном транспорте.\\n\\nДля водителей: в команде работает негласное правило, что водители по возможности должны помогать ближнему своему и предлагать свою кандидатуру на подвоз тех, у кого авто нет.\\n\\nУсловия довоза всегда ставит водитель. Те, у кого авто нет либо соглашаются с условиями водителя, либо добираются до места проведения мероприятия сами.\",\n          \"questionItem\": {\n            \"question\": {\n              \"required\": true,\n              \"choiceQuestion\": {\n                \"type\": \"RADIO\",\n                \"options\": [\n                  {\n                    \"value\": \"У меня ЕСТЬ авто и я МОГУ подвезти сокомандников\"\n                  },\n                  {\n                    \"value\": \"У меня ЕСТЬ авто, но я НЕ МОГУ подвезти сокомандников\"\n                  },\n                  {\n                    \"value\": \"У меня НЕТ АВТОМОБИЛЯ, доберусь до места проведения мероприятия самостоятельно или самостоятельно подсяду к тем, у кого авто есть\"\n                  }\n                ]\n              }\n            }\n          }\n        },\n        \"location\": {\n          \"index\": 4\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Кол-во мест для подвоза\",\n          \"pageBreakItem\": {}\n        },\n        \"location\": {\n          \"index\": 5\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Скольких человек вы готовы подвезти?\",\n          \"questionItem\": {\n            \"question\": {\n              \"required\": true,\n              \"choiceQuestion\": {\n                \"type\": \"RADIO\",\n                \"options\": [\n                  {\n                    \"value\": \"1\"\n                  },\n                  {\n                    \"value\": \"2\"\n                  },\n                  {\n                    \"value\": \"3\"\n                  },\n                  {\n                    \"value\": \"4\"\n                  },\n                  {\n                    \"isOther\": true\n                  }\n                ]\n              }\n            }\n          }\n        },\n        \"location\": {\n          \"index\": 6\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Ближайшее к вам метро\",\n          \"pageBreakItem\": {}\n        },\n        \"location\": {\n          \"index\": 7\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Напишите ближайшее к вам метро или местоположение откуда стартуете\",\n          \"description\": \"Это нужно для того, чтобы легче было организовать контакт тех, у кого есть авто и тех, у кого авто нет.\\n\\nПроще говоря определить, кто ближе к кому живет для более продуктивной рассадке по авто.\\n\\nПишите или метро или ближайшие ориентиры, если живете не в Москве\",\n          \"questionItem\": {\n            \"question\": {\n              \"required\": true,\n              \"textQuestion\": {}\n            }\n          }\n        },\n        \"location\": {\n          \"index\": 8\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Подтверждение перед отправкой формы\",\n          \"pageBreakItem\": {}\n        },\n        \"location\": {\n          \"index\": 9\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Подтверждение\",\n          \"description\": \"Данный пункт требуется для корректной генерации формы через чат-бот.\\n\\nНу и лишнее подтверждение данных будет не лишним.\\n\\nСледующим пунктом не забудьте нажать \\\"Отправить форму\\\", чтобы ваши ответы записались.\",\n          \"questionItem\": {\n            \"question\": {\n              \"required\": true,\n              \"choiceQuestion\": {\n                \"type\": \"RADIO\",\n                \"options\": [\n                  {\n                    \"value\": \"Все мои данные указаны верно, все варианты выбраны мною верно, все сноски мною прочитаны и я со всем согласен, переходим к отправке опроса!\"\n                  }\n                ]\n              }\n            }\n          }\n        },\n        \"location\": {\n          \"index\": 10\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Причина пропуска мероприятия\",\n          \"pageBreakItem\": {}\n        },\n        \"location\": {\n          \"index\": 11\n        }\n      }\n    },\n    {\n      \"createItem\": {\n        \"item\": {\n          \"title\": \"Напишите причину, по которой пропускаете мероприятие\",\n          \"description\": \"Введите развернутый ответ, почему вы не едете на мероприятие. Это дает возможность руководящему составу грамотно заниматься управлением коллектива.\\n\\nЕсли ваш интерес к хобби или к команде угас, можете самостоятельно покинуть команду и не отягощать себя прохождением опросов.\\n\\nЕсли у вас нет возможности посещать игры по весьма объективной причине, свяжите с командиром и вам выдадут бронь от прохождения опросов.\\n\\nМы требует осознанных предложений при составлении причины пропуска мероприятия. Неинформативное изложение причин пропуска мероприятия приравниваются к потере интереса к хобби, что повлечет за собой удаление из коллектива без предупреждения.\",\n          \"questionItem\": {\n            \"question\": {\n              \"required\": true,\n              \"textQuestion\": {\n                \"paragraph\": true\n              }\n            }\n          }\n        },\n        \"location\": {\n          \"index\": 12\n        }\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -672,
+        -64
+      ],
+      "id": "898b45b5-aeed-4895-81c9-48294c77c345",
+      "name": "Questions JSON Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://forms.googleapis.com/v1/forms/{{ $('Create Form').item.json.formId }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -480,
+        -64
+      ],
+      "id": "8d9c85a4-d789-4d2d-ba66-eaaced4574f2",
+      "name": "Add questions to form",
+      "retryOnFail": true,
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "0u0ZFOiCm8VVVMVM",
+          "name": "Second!"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = items[0].json;\n\nconst itemIds = {\n  callsignQuestion: response.replies[0]?.createItem?.itemId,\n  attendanceSection: response.replies[1]?.createItem?.itemId,\n  attendanceQuestion: response.replies[2]?.createItem?.itemId,\n  carSection: response.replies[3]?.createItem?.itemId,\n  carQuestion: response.replies[4]?.createItem?.itemId,\n  seatsSection: response.replies[5]?.createItem?.itemId,\n  seatsQuestion: response.replies[6]?.createItem?.itemId,\n  metroSection: response.replies[7]?.createItem?.itemId,\n  metroQuestion: response.replies[8]?.createItem?.itemId,\n  confirmationSection: response.replies[9]?.createItem?.itemId,\n  confirmationQuestion: response.replies[10]?.createItem?.itemId,\n  reasonSection: response.replies[11]?.createItem?.itemId,\n  reasonQuestion: response.replies[12]?.createItem?.itemId\n};\n\nconst questionIds = {\n  callsignQuestion: response.replies[0]?.createItem?.item?.questionItem?.question?.questionId,\n  attendanceQuestion: response.replies[2]?.createItem?.item?.questionItem?.question?.questionId,\n  carQuestion: response.replies[4]?.createItem?.item?.questionItem?.question?.questionId,\n  seatsQuestion: response.replies[6]?.createItem?.item?.questionItem?.question?.questionId,\n  metroQuestion: response.replies[8]?.createItem?.item?.questionItem?.question?.questionId,\n  confirmationQuestion: response.replies[10]?.createItem?.item?.questionItem?.question?.questionId,\n  reasonQuestion: response.replies[12]?.createItem?.item?.questionItem?.question?.questionId\n};\n\nreturn [{\n  json: {\n    itemIds,\n    questionIds,\n    formId: response.formId || response.form?.formId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        -64
+      ],
+      "id": "14174c0a-26f0-4a6c-8d0e-ecfeb1224ecf",
+      "name": "Mapping questions by indexes"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://forms.googleapis.com/v1/forms/{{ $('Create Form').item.json.formId }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        96,
+        -64
+      ],
+      "id": "cecd0fd3-d17d-4279-b52b-a223428966cb",
+      "name": "Add relations to questions",
+      "retryOnFail": true,
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "0u0ZFOiCm8VVVMVM",
+          "name": "Second!"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Questions and relations\nIn this section, we will add new questions and then determine the dependencies between them",
+        "height": 256,
+        "width": 944,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -720,
+        -144
+      ],
+      "typeVersion": 1,
+      "id": "279ca139-4eba-4e65-bca9-b8055aa20a3f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Add Form to PSQL and Notify\nAdd form to postgresql and then send notification about new form to users",
+        "height": 240,
+        "width": 464,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        272,
+        -352
+      ],
+      "typeVersion": 1,
+      "id": "803ab1cf-3dc5-4b5b-94f7-a7c315f287e0",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"requests\": [\n    {\n      \"updateItem\": {\n        \"item\": {\n          \"itemId\": \"{{$json.itemIds.attendanceQuestion}}\",\n          \"questionItem\": {\n            \"question\": {\n              \"questionId\": \"{{$json.itemIds.attendanceQuestion}}\",\n              \"required\": true,\n              \"choiceQuestion\": {\n                \"type\": \"RADIO\",\n                \"options\": [\n                  {\n                    \"value\": \"Еду на мероприятие 100%\",\n                    \"goToSectionId\": \"{{$json.itemIds.carSection}}\"\n                  },\n                  {\n                    \"value\": \"Не еду на мероприятие\",\n                    \"goToSectionId\": \"{{$json.itemIds.reasonSection}}\"\n                  }\n                ]\n              }\n            }\n          }\n        },\n        \"updateMask\": \"questionItem.question.choiceQuestion.options\",\n        \"location\": {\n          \"index\": 2\n        }\n      }\n    },\n    {\n      \"updateItem\": {\n        \"item\": {\n          \"itemId\": \"{{$json.itemIds.carQuestion}}\",\n          \"questionItem\": {\n            \"question\": {\n              \"questionId\": \"{{$json.itemIds.carQuestion}}\",\n              \"required\": true,\n              \"choiceQuestion\": {\n                \"type\": \"RADIO\",\n                \"options\": [\n                  {\n                    \"value\": \"У меня ЕСТЬ авто и я МОГУ подвезти сокомандников\",\n                    \"goToSectionId\": \"{{$json.itemIds.seatsSection}}\"\n                  },\n                  {\n                    \"value\": \"У меня ЕСТЬ авто, но я НЕ МОГУ подвезти сокомандников\",\n                    \"goToSectionId\": \"{{$json.itemIds.confirmationSection}}\"\n                  },\n                  {\n                    \"value\": \"У меня НЕТ АВТОМОБИЛЯ, доберусь до места проведения мероприятия самостоятельно или самостоятельно подсяду к тем, у кого авто есть\",\n                    \"goToSectionId\": \"{{$json.itemIds.metroSection}}\"\n                  }\n                ]\n              }\n            }\n          }\n        },\n        \"updateMask\": \"questionItem.question.choiceQuestion.options\",\n        \"location\": {\n          \"index\": 4\n        }\n      }\n    },\n    {\n      \"updateItem\": {\n        \"item\": {\n          \"itemId\": \"{{$json.itemIds.seatsQuestion}}\",\n          \"questionItem\": {\n            \"question\": {\n              \"questionId\": \"{{$json.itemIds.seatsQuestion}}\",\n              \"required\": true,\n              \"choiceQuestion\": {\n                \"type\": \"RADIO\",\n                \"options\": [\n                  {\n                    \"value\": \"1\",\n                    \"goToSectionId\": \"{{$json.itemIds.metroSection}}\"\n                  },\n                  {\n                    \"value\": \"2\",\n                    \"goToSectionId\": \"{{$json.itemIds.metroSection}}\"\n                  },\n                  {\n                    \"value\": \"3\",\n                    \"goToSectionId\": \"{{$json.itemIds.metroSection}}\"\n                  },\n                  {\n                    \"value\": \"4\",\n                    \"goToSectionId\": \"{{$json.itemIds.metroSection}}\"\n                  },\n                  {\n                    \"isOther\": true,\n                    \"goToSectionId\": \"{{$json.itemIds.metroSection}}\"\n                  }\n                ]\n              }\n            }\n          }\n        },\n        \"updateMask\": \"questionItem.question.choiceQuestion.options\",\n        \"location\": {\n          \"index\": 6\n        }\n      }\n    },\n    {\n      \"updateItem\": {\n        \"item\": {\n          \"itemId\": \"{{$json.itemIds.confirmationQuestion}}\",\n          \"questionItem\": {\n            \"question\": {\n              \"questionId\": \"{{$json.itemIds.confirmationQuestion}}\",\n              \"required\": true,\n              \"choiceQuestion\": {\n                \"type\": \"RADIO\",\n                \"options\": [\n                  {\n                    \"value\": \"Все мои данные указаны верно, все варианты выбраны мною верно, все сноски мною прочитаны и я со всем согласен, переходим к отправке опроса!\",\n                    \"goToAction\": \"SUBMIT_FORM\"\n                  }\n                ]\n              }\n            }\n          }\n        },\n        \"updateMask\": \"questionItem.question.choiceQuestion.options\",\n        \"location\": {\n          \"index\": 10\n        }\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        -64
+      ],
+      "id": "63d47a65-9b4b-4e7b-a204-67714266337b",
+      "name": "Question relations JSON Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Create Form": {
+      "main": [
+        [
+          {
+            "node": "Questions JSON Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Form to PSQL": {
+      "main": [
+        [
+          {
+            "node": "New Form notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Form notify": {
+      "main": [
+        []
+      ]
+    },
+    "Questions JSON Fields": {
+      "main": [
+        [
+          {
+            "node": "Add questions to form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add questions to form": {
+      "main": [
+        [
+          {
+            "node": "Mapping questions by indexes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapping questions by indexes": {
+      "main": [
+        [
+          {
+            "node": "Question relations JSON Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add relations to questions": {
+      "main": [
+        [
+          {
+            "node": "Insert Form to PSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Question relations JSON Fields": {
+      "main": [
+        [
+          {
+            "node": "Add relations to questions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Moscow",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "a2adff2d-dab1-4563-86eb-565590dca4f6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b6c3a627dbf639be723176dbe11bee0da19ab2ae118884efc1823b5132ed3c61"
+  },
+  "id": "LYeuKSZ9T7lcqlgw",
+  "tags": []
+}
