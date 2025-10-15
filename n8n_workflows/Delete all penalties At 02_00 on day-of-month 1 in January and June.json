@@ -1,5 +1,5 @@
 {
-  "name": "Delete all penalties At 02:00 on day-of-month 1 in January and June.",
+  "name": "Delete all penalties At 02_00 on day-of-month 1 in January and June.",
   "nodes": [
     {
       "parameters": {
@@ -61,7 +61,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "805e1f3e-c467-4760-8b4a-11416b247453",
+  "versionId": "4869678f-783d-4a78-b6dc-85420e06c951",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b6c3a627dbf639be723176dbe11bee0da19ab2ae118884efc1823b5132ed3c61"
