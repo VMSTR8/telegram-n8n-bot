@@ -1,10 +1,11 @@
-from typing import Any, Optional, Tuple
+from typing import Any
 
 from aiogram import Router
 from aiogram.filters import ChatMemberUpdatedFilter, IS_MEMBER, IS_NOT_MEMBER
-from aiogram.types import ChatMemberUpdated
+from aiogram.types import ChatMemberUpdated, User as TelegramUser, Chat as TelegramChat
+from aiogram import Bot
 
-from app.models import UserRole
+from app.models import UserRole, Chat, User
 
 from app.services import UserService, ChatService, PenaltyService, MessageQueueService
 
@@ -12,21 +13,34 @@ from app.services import UserService, ChatService, PenaltyService, MessageQueueS
 class SystemHandlers:
     """
     Handlers for system events like user joining or leaving a chat.
+
+    Attributes:
+        router (Router): The router to register handlers.
+        user_service (UserService): Service for user-related operations.
+        chat_service (ChatService): Service for chat-related operations.
+        penalty_service (PenaltyService): Service for penalty-related operations.
+        message_queue_service (MessageQueueService): Service for sending messages.
+    
+    Methods:
+        _register_handlers(): Registers the event handlers.
+        on_user_join(event): Handles user joining a chat.
+        on_user_leave(event): Handles user leaving a chat.
     """
 
     def __init__(self):
-        self.router = Router()
-        self.user_service = UserService()
-        self.chat_service = ChatService()
-        self.penalty_service = PenaltyService()
-        self.message_queue_service = MessageQueueService()
+        self.router: Router = Router()
+        self.user_service: UserService = UserService()
+        self.chat_service: ChatService = ChatService()
+        self.penalty_service: PenaltyService = PenaltyService()
+        self.message_queue_service: MessageQueueService = MessageQueueService()
         self._register_handlers()
 
     def _register_handlers(self) -> None:
         """
         Register handlers for user join and leave events.
 
-        :return: None
+        Returns:
+            None
         """
         self.router.chat_member.register(
             self.on_user_join,
@@ -44,26 +58,29 @@ class SystemHandlers:
             self,
             event: ChatMemberUpdated,
             is_join: bool = True
-    ) -> Optional[Tuple[Any, Any, Any, Any]]:
+    ) -> tuple[TelegramUser, TelegramChat, Bot, User | None] | None:
         """
         Extract user, chat, bot, and user existence from the event.
 
-        :param event: ChatMemberUpdated event
-        :param is_join: Boolean indicating if the event is a join event
-        :return: Tuple of user, chat, bot, and user existence or None
+        Args:
+            event (ChatMemberUpdated): The chat member update event.
+            is_join (bool): Flag indicating if the event is a join event.
+        
+        Returns:
+            tuple: (user, chat, bot, user_exists) or None if chat doesn't exist or user is a bot.
         """
         if is_join:
-            user = event.new_chat_member.user
+            user: TelegramUser = event.new_chat_member.user
         else:
-            user = event.old_chat_member.user
-        chat = event.chat
-        bot = event.bot
+            user: TelegramUser = event.old_chat_member.user
+        chat: TelegramChat = event.chat
+        bot: Bot = event.bot
 
-        chat_exists = await self.chat_service.get_chat_by_telegram_id(chat.id)
+        chat_exists: Chat | None = await self.chat_service.get_chat_by_telegram_id(chat.id)
         if not chat_exists or user.is_bot:
             return None
 
-        user_exists = await self.user_service.get_user_by_telegram_id(user.id)
+        user_exists: User | None = await self.user_service.get_user_by_telegram_id(user.id)
 
         return user, chat, bot, user_exists
 
@@ -71,12 +88,22 @@ class SystemHandlers:
         """
         Handle user joining a chat.
 
-        :param event: ChatMemberUpdated event
-        :return: None
+        Args:
+            event (ChatMemberUpdated): The chat member update event.
+
+        Returns:
+            None
         """
-        result = await self._extract_event_context(event, is_join=True)
+        result: tuple[TelegramUser, TelegramChat, Bot, User | None] = \
+            await self._extract_event_context(event, is_join=True)
         if not result:
             return
+        
+        user: TelegramUser
+        chat: TelegramChat
+        bot: Bot
+        user_exists: User | None
+
         user, chat, bot, user_exists = result
 
         if user_exists:
@@ -132,18 +159,28 @@ class SystemHandlers:
         """
         Handle user leaving a chat.
 
-        :param event: ChatMemberUpdated event
-        :return: None
+        Args:
+            event (ChatMemberUpdated): The chat member update event.
+        
+        Returns:
+            None
         """
-        result = await self._extract_event_context(event, is_join=False)
+        result: tuple[TelegramUser, TelegramChat, Bot, User | None] = \
+            await self._extract_event_context(event, is_join=False)
         if not result:
             return
+        
+        user: TelegramUser
+        chat: TelegramChat
+        bot: Bot
+        user_exists: User | None
+
         user, chat, bot, user_exists = result
 
         if not user_exists:
-            text = f'{user.full_name.replace('_', r'\_')} удален(а) из чата.'
+            text: str = f'{user.full_name.replace('_', r'\_')} удален(а) из чата.'
         else:
-            text = f'`{user_exists.callsign.capitalize()}` удален(а) из чата.'
+            text: str = f'`{user_exists.callsign.capitalize()}` удален(а) из чата.'
 
         await self.user_service.deactivate_user(telegram_id=user.id)
 
