@@ -20,8 +20,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Context manager for application lifespan events.
 
-    :param app: FastAPI - FastAPI application instance
-    :return: AsyncGenerator[None, None] - asynchronous generator.
+    Args:
+        app (FastAPI): The FastAPI application instance.
+    
+    Raises:
+        Exception: If any error occurs during startup or shutdown.
+    
+    Yields:
+        Shuts down the application context.
+    
+    Returns:
+        None
     """
     logging.info('Starting application in production mode...')
 
@@ -74,7 +83,8 @@ def create_app() -> FastAPI:
     """
     Creates an instance of the FastAPI application.
 
-    :return: FastAPI - FastAPI application instance.
+    Returns:
+        An instance of FastAPI with configured routes and lifespan.
     """
     app: FastAPI = FastAPI(
         title='Telegram Bot with n8n integration',
