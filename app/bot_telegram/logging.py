@@ -6,15 +6,18 @@ from pathlib import Path
 def setup_logging() -> None:
     """
     Sets up logging configuration for the application.
+
+    Returns:
+        None
     """
     logs_dir: Path = Path('logs')
     logs_dir.mkdir(exist_ok=True)
 
-    console_format = logging.Formatter(
+    console_format: logging.Formatter = logging.Formatter(
         '%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s',
         '%Y-%m-%d %H:%M:%S'
     )
-    file_format = logging.Formatter(
+    file_format: logging.Formatter = logging.Formatter(
         '%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s',
         '%Y-%m-%d %H:%M:%S'
     )
