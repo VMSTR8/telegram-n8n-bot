@@ -224,7 +224,7 @@
     },
     {
       "parameters": {
-        "amount": 6000
+        "amount": 60
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -234,7 +234,8 @@
       ],
       "id": "f20e9f62-5036-4a74-bf4d-e078e6bf7127",
       "name": "Wait 60 sec",
-      "webhookId": "cd85ade3-3649-49cd-a646-e0a65c56fea1"
+      "webhookId": "cd85ade3-3649-49cd-a646-e0a65c56fea1",
+      "retryOnFail": true
     },
     {
       "parameters": {
@@ -427,7 +428,8 @@
       ],
       "id": "eb2b93e7-c205-414a-b243-c70b3f9ad852",
       "name": "Wait 60 sec (survey closed)",
-      "webhookId": "cd85ade3-3649-49cd-a646-e0a65c56fea1"
+      "webhookId": "cd85ade3-3649-49cd-a646-e0a65c56fea1",
+      "retryOnFail": true
     }
   ],
   "pinData": {},
@@ -634,7 +636,7 @@
     "timezone": "Europe/Moscow",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "5e3c77f0-41cf-474e-bb5d-142b2eb32bc1",
+  "versionId": "ae549f85-b40d-4d78-acff-2ef6815fd1a3",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b6c3a627dbf639be723176dbe11bee0da19ab2ae118884efc1823b5132ed3c61"
