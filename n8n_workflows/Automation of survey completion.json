@@ -1,0 +1,644 @@
+{
+  "name": "Automation of survey completion",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Workflow Start\nThe workflow starts every day at noon and retrieves all existing surveys from the database. It then filters them into two categories: incomplete and completed.",
+        "height": 272,
+        "width": 912,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -320,
+        80
+      ],
+      "typeVersion": 1,
+      "id": "f7502164-2ca0-4b47-94a9-a2c7a3d2a93f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        176
+      ],
+      "id": "8bf4ff3c-1f1f-4fd9-ba16-69b1010df587",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ac0221c8-3d24-4067-b0cb-5fb56ab74e60",
+              "leftValue": "={{ $input.item.json }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "22a750c6-bd6b-4d62-a57a-b8114a23fcc3",
+              "leftValue": "={{ $now }}",
+              "rightValue": "={{ $json.ended_at }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "beforeOrEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        192
+      ],
+      "id": "eaf77953-6ca3-491b-867b-3fe9492826d9",
+      "name": "If now < ended_at",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "url": "=https://forms.googleapis.com/v1/forms/{{ $json.google_form_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        688,
+        -96
+      ],
+      "id": "f7db2079-3c9d-4088-b7f0-40e6750794f6",
+      "name": "GET Form data",
+      "retryOnFail": true,
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "0u0ZFOiCm8VVVMVM",
+          "name": "Second!"
+        },
+        "googleApi": {
+          "id": "LW2UYZZLbiQUaLPG",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://forms.googleapis.com/v1/forms/{{ $node[\"GET Form data\"].json[\"formId\"] }}/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        -96
+      ],
+      "id": "82d34dcf-42b3-45dd-9b97-c74ee0d6c4a2",
+      "name": "GET Form all responses",
+      "retryOnFail": true,
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "0u0ZFOiCm8VVVMVM",
+          "name": "Second!"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const questionTitle = \"Ваш позывной?\";\n\nfor (const item of items[0].json.items) {\n  if (item.title && item.title.trim().toLowerCase() === questionTitle.toLowerCase()) {\n    return [{ json: { questionId: item.questionItem.question.questionId } }];\n  }\n}\nreturn [{ json: { error: \"Не найден вопрос с таким названием\" } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "d9ad339e-5a60-4115-b94f-bb23319d8ef9",
+      "name": "Filter qID by name"
+    },
+    {
+      "parameters": {
+        "jsCode": "const questionId = $node[\"Filter qID by name\"].json[\"questionId\"];\nconst responses = items[0].json.responses || [];\nconst googleFormId = $('GET Form data').first().json.formId || [];\n\nconst answers = [];\n\nfor (const resp of responses) {\n  const ans = resp.answers?.[questionId];\n  if (ans?.textAnswers?.answers?.length) {\n    for (const a of ans.textAnswers.answers) {\n      answers.push({ answer: a.value });\n    }\n  }\n}\n\nreturn {\n  json: {\n    google_form_id: googleFormId,\n    answers: answers\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -96
+      ],
+      "id": "7e2893bf-7801-4047-af5f-6a7fac1f1029",
+      "name": "Filter callsigns"
+    },
+    {
+      "parameters": {
+        "content": "## Getting the callsigns of users who complete the survey\nWe receive a list of users who have completed the survey.\n",
+        "height": 224,
+        "width": 768,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        656,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "a0fbb89e-7aca-488a-b19e-04a68eb1cbba",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Send it to the bot and wait 60 sec\nFurther logic is handled by AIogram.\n",
+        "height": 288,
+        "width": 464,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1520,
+        48
+      ],
+      "typeVersion": 1,
+      "id": "1f5b36c4-1287-4914-99b9-75e7113a1d1a",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        144,
+        176
+      ],
+      "id": "412cbcf9-8c3a-47ee-a14b-84129ec69a5e",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM surveys\nWHERE NOT expired;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        176
+      ],
+      "id": "cc818338-a803-4d0d-acaf-cdf3079aabec",
+      "name": "Select all surveys not expired",
+      "credentials": {
+        "postgres": {
+          "id": "ahXLEZ6rtnM0sKBU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 6000
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1824,
+        144
+      ],
+      "id": "f20e9f62-5036-4a74-bf4d-e078e6bf7127",
+      "name": "Wait 60 sec",
+      "webhookId": "cd85ade3-3649-49cd-a646-e0a65c56fea1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tg.reddawn.ru/webhook/send-survey-completion-status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1616,
+        128
+      ],
+      "id": "7daa0674-1f75-49b6-a1c1-d9cfb82d1930",
+      "name": "POST to /webhook/send-survey-completion-status",
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "we0Pc9zFTFLuktMJ",
+          "name": "n8n to tg"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE surveys\nSET expired = TRUE\nWHERE id = {{ $json.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        688,
+        448
+      ],
+      "id": "61317d51-9ad4-4e2d-bb81-1f3d155007fa",
+      "name": "Set survey expired = TRUE",
+      "credentials": {
+        "postgres": {
+          "id": "ahXLEZ6rtnM0sKBU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://forms.googleapis.com/v1/forms/{{ $('If now < ended_at').item.json.google_form_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        448
+      ],
+      "id": "3ec6a79e-59fe-410d-b321-c7a05b63cde3",
+      "name": "GET Form data (survey closed)",
+      "retryOnFail": true,
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "0u0ZFOiCm8VVVMVM",
+          "name": "Second!"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const questionTitle = \"Ваш позывной?\";\n\nfor (const item of items[0].json.items) {\n  if (item.title && item.title.trim().toLowerCase() === questionTitle.toLowerCase()) {\n    return [{ json: { questionId: item.questionItem.question.questionId } }];\n  }\n}\nreturn [{ json: { error: \"Не найден вопрос с таким названием\" } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        448
+      ],
+      "id": "c6255500-898c-461d-8830-b9fe8a9ac719",
+      "name": "Filter qID by name (survey closed)"
+    },
+    {
+      "parameters": {
+        "url": "=https://forms.googleapis.com/v1/forms/{{ $('GET Form data (survey closed)').item.json.formId }}/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1312,
+        448
+      ],
+      "id": "616d5126-76e8-4649-bd2a-7f1762883e91",
+      "name": "GET Form all responses (survey closed)",
+      "retryOnFail": true,
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "0u0ZFOiCm8VVVMVM",
+          "name": "Second!"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const questionId = $node[\"Filter qID by name (survey closed)\"].json[\"questionId\"];\nconst responses = items[0].json.responses || [];\nconst googleFormId = $('GET Form data (survey closed)').first().json.formId || [];\n\nconst answers = [];\n\nfor (const resp of responses) {\n  const ans = resp.answers?.[questionId];\n  if (ans?.textAnswers?.answers?.length) {\n    for (const a of ans.textAnswers.answers) {\n      answers.push({ answer: a.value });\n    }\n  }\n}\n\nreturn {\n  json: {\n    google_form_id: googleFormId,\n    answers: answers\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        448
+      ],
+      "id": "3393d9d4-4785-44df-86fd-7e982438758e",
+      "name": "Filter callsigns (survey closed)"
+    },
+    {
+      "parameters": {
+        "content": "## Set status of the survey expired, get the callsigns of users who complete the survey\nWe receive a list of users who have completed the survey.",
+        "height": 256,
+        "width": 1024,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        640,
+        368
+      ],
+      "typeVersion": 1,
+      "id": "85e22e0d-f652-471e-95e8-82555cd8a3f0",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Send it to the bot and wait 60 sec\nFurther logic is handled by AIogram.",
+        "height": 288,
+        "width": 416,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1728,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "5c48cf71-ba06-4a9b-8518-7d7c8bdead0a",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tg.reddawn.ru/webhook/send-survey-finished",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        512
+      ],
+      "id": "fcd1b176-bf9c-4e55-859d-264a79aca488",
+      "name": "POST to /webhook/send-survey-finished",
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "we0Pc9zFTFLuktMJ",
+          "name": "n8n to tg"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        528
+      ],
+      "id": "eb2b93e7-c205-414a-b243-c70b3f9ad852",
+      "name": "Wait 60 sec (survey closed)",
+      "webhookId": "cd85ade3-3649-49cd-a646-e0a65c56fea1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Select all surveys not expired",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If now < ended_at": {
+      "main": [
+        [
+          {
+            "node": "GET Form data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set survey expired = TRUE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Form data": {
+      "main": [
+        [
+          {
+            "node": "Filter qID by name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Form all responses": {
+      "main": [
+        [
+          {
+            "node": "Filter callsigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter qID by name": {
+      "main": [
+        [
+          {
+            "node": "GET Form all responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter callsigns": {
+      "main": [
+        [
+          {
+            "node": "POST to /webhook/send-survey-completion-status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "If now < ended_at",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select all surveys not expired": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 60 sec": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to /webhook/send-survey-completion-status": {
+      "main": [
+        [
+          {
+            "node": "Wait 60 sec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set survey expired = TRUE": {
+      "main": [
+        [
+          {
+            "node": "GET Form data (survey closed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Form data (survey closed)": {
+      "main": [
+        [
+          {
+            "node": "Filter qID by name (survey closed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter qID by name (survey closed)": {
+      "main": [
+        [
+          {
+            "node": "GET Form all responses (survey closed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Form all responses (survey closed)": {
+      "main": [
+        [
+          {
+            "node": "Filter callsigns (survey closed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter callsigns (survey closed)": {
+      "main": [
+        [
+          {
+            "node": "POST to /webhook/send-survey-finished",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to /webhook/send-survey-finished": {
+      "main": [
+        [
+          {
+            "node": "Wait 60 sec (survey closed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 60 sec (survey closed)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Moscow",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "5e3c77f0-41cf-474e-bb5d-142b2eb32bc1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b6c3a627dbf639be723176dbe11bee0da19ab2ae118884efc1823b5132ed3c61"
+  },
+  "id": "ZYI2eXAf3kcCqOPu",
+  "tags": []
+}
