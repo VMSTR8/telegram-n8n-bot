@@ -15,7 +15,8 @@ async def main() -> None:
     """
     Asynchronous main function to initialize the bot, database,
 
-    :return: None - starts the bot polling
+    Returns:
+        None
     """
     setup_logging()
 
@@ -35,7 +36,8 @@ def run_webhook_mode() -> None:
     """
     Function to run the application in webhook mode using Uvicorn.
 
-    :return: None - runs the Uvicorn server
+    Returns:
+        None
     """
     setup_logging()
     logging.info('Starting application in webhook mode...')
@@ -53,7 +55,8 @@ def run_polling_mode() -> None:
     """
     Function to run the bot in polling mode.
 
-    :return: None - starts the bot polling
+    Returns:
+        None
     """
     try:
         run(main())
