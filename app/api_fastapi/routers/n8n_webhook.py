@@ -11,7 +11,7 @@ from app.api_fastapi.dependencies import (
     get_message_queue_service,
 )
 from app.api_fastapi.schemas import NewFormSchema, SurveyResponseSchema
-from app.celery_tasks import ban_user_from_chat
+from app.celery_tasks import ban_user_from_chat, send_bulk_messages
 from app.decorators import FastAPIValidate
 from app.models import Chat, Survey, User
 from app.services import (
@@ -137,7 +137,6 @@ async def survey_completion_status_webhook(
         chat_service: ChatService = Depends(get_chat_service),
         survey_service: SurveyService = Depends(get_survey_service),
         user_service: UserService = Depends(get_user_service),
-        message_queue_service: MessageQueueService = Depends(get_message_queue_service)
 ) -> Dict[str, Any]:
     """
     Endpoint to handle incoming survey completion status webhook from n8n.
@@ -148,7 +147,6 @@ async def survey_completion_status_webhook(
     :param chat_service: ChatService - instance of ChatService.
     :param survey_service: SurveyService - instance of SurveyService.
     :param user_service: UserService - instance of UserService.
-    :param message_queue_service: MessageQueueService - instance of MessageQueueService.
     :return: Dict[str, Any] - Acknowledgment of successful processing.
     """
     try:
@@ -172,34 +170,37 @@ async def survey_completion_status_webhook(
                 for callsign, data in not_answered_users.items()
             )
 
-            escaped_title = survey.title.replace('_', r'\_')
+            escaped_title: str = survey.title.replace('_', r'\_')
             not_answered_text: str = (
-                f'Опрос по мероприятию [{escaped_title}]({survey.form_url}) '
+                f'⚠️ Опрос по мероприятию [{escaped_title}]({survey.form_url}) '
                 f'не прошли:\n{not_answered_list}'
             )
 
             reminder_text: str = (
-                f'Напоминаю, что опрос нужно пройти до\n\n'
+                f'🔔 Напоминаю, что опрос нужно пройти до\n\n'
                 f'*{survey.ended_at.astimezone(tz=settings.timezone_zoneinfo).strftime("%d.%m.%Y %H:%M")}*\n\n'
                 f'Если опрос не будет пройден до указанной даты, вы получите штрафной балл.\n'
                 f'Три штрафных балла приведут к автоматическому исключению из команды.\n\n'
                 f'🔗 [Перейти к опросу]({survey.form_url})'
             )
 
-            await message_queue_service.send_message(
-                chat_id=bound_chat.telegram_id,
-                message_thread_id=bound_thread_id,
-                text=not_answered_text,
-                disable_web_page_preview=True,
-                parse_mode='Markdown'
-            )
+            messages_to_send: List[Dict[str, Any]] = [
+                {
+                    'chat_id': bound_chat.telegram_id,
+                    'message_thread_id': bound_thread_id,
+                    'text': not_answered_text,
+                    'disable_web_page_preview': True,
+                    'parse_mode': 'Markdown'
+                },
+                {
+                    'chat_id': bound_chat.telegram_id,
+                    'message_thread_id': bound_thread_id,
+                    'text': reminder_text,
+                    'parse_mode': 'Markdown'
+                }
+            ]
 
-            await message_queue_service.send_message(
-                chat_id=bound_chat.telegram_id,
-                message_thread_id=bound_thread_id,
-                text=reminder_text,
-                parse_mode='Markdown'
-            )
+            send_bulk_messages.delay(messages_to_send)
 
         return {'status': 'received', 'data': survey_responses}
 
@@ -259,7 +260,7 @@ async def send_survey_finished_webhook(
         if not_answered_users:
             penalized_users_list: list[str] = []
             for callsign, data in not_answered_users.items():
-                user: Optional[User] = await user_service.get_active_user_by_callsign(callsign)
+                user: Optional[User] = await user_service.get_active_not_creator_user_by_callsign(callsign)
                 if user:
                     await penalty_service.add_penalty(
                         user_id=user.id,
@@ -271,11 +272,11 @@ async def send_survey_finished_webhook(
                     else callsign
                 )
 
-            escaped_title = survey.title.replace('_', r'\_')
+            escaped_title: str = survey.title.replace('_', r'\_')
             penalized_users_text: str = (
-                f'Опрос по мероприятию [{escaped_title}]({survey.form_url}) завершен.\n\n'
+                f'⚠️ Опрос по мероприятию [{escaped_title}]({survey.form_url}) завершен.\n\n'
                 f'Ниже перечислены пользователи, которые не прошли опрос вовремя '
-                f'и получили +1 штрафной балл (3 штрафных балла = исключение из команды):\n'
+                f'и получили +1 штрафной балл\n\n(3 штрафных балла = исключение из команды):\n'
                 f'{', '.join(penalized_users_list)}'
             )
 
@@ -287,13 +288,24 @@ async def send_survey_finished_webhook(
                 parse_mode='Markdown'
             )
 
-        users_with_three_penalties = await penalty_service.get_all_users_with_three_penalties()
+        else:
+            await message_queue_service.send_message(
+                chat_id=bound_chat.telegram_id,
+                message_thread_id=bound_thread_id,
+                text=(
+                    f'✅ Опрос по мероприятию [{survey.title}]({survey.form_url}) завершен.\n\n'
+                    f'Все члены команды прошли опрос вовремя!'
+                ),
+                parse_mode='Markdown'
+            )
+
+        users_with_three_penalties: List[Dict[str, Any]] = await penalty_service.get_all_users_with_three_penalties()
 
         if users_with_three_penalties:
             for user_data in users_with_three_penalties:
                 ban_user_from_chat.delay(bound_chat.telegram_id, user_data['telegram_id'])
 
-            callsigns = ', '.join(
+            callsigns: str = ', '.join(
                 f'@{user_data['username']}'.replace('_', r'\_')
                 if user_data.get('username') else user_data['callsign']
                 for user_data in users_with_three_penalties
@@ -303,7 +315,7 @@ async def send_survey_finished_webhook(
                 chat_id=bound_chat.telegram_id,
                 message_thread_id=bound_thread_id,
                 text=(
-                    f'Пользователи, достигшие 3 штрафных баллов, были автоматически исключены из команды:\n'
+                    f'🚫 Пользователи, достигшие 3 штрафных баллов, были автоматически исключены из команды:\n'
                     f'{callsigns}'
                 ),
                 parse_mode='Markdown'
