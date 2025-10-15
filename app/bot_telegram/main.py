@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -13,10 +12,26 @@ from app.models import UserRole, User
 class BotManager:
     """
     Class to manage the Telegram bot and its dispatcher.
+
+    Attributes:
+        bot (Bot): Instance of the Telegram bot.
+        dispatcher (Dispatcher): Instance of the bot's dispatcher.
+        user_service (UserService): Service for user-related operations.
+        creator_id (int): Telegram ID of the bot creator.
+    
+    Methods:
+        create_bot(): Creates and returns an instance of the bot.
+        create_dispatcher(): Creates and returns an instance of the dispatcher.
+        ensure_creator_exists(): Creates the creator user if not already present in the database.
+        start_polling(): Starts the bot in polling mode.
+    
+    Properties:
+        bot: Returns the bot instance.
+        dispatcher: Returns the dispatcher instance.
     """
     def __init__(self) -> None:
-        self._bot: Optional[Bot] = None
-        self._dispatcher: Optional[Dispatcher] = None
+        self._bot: Bot | None = None
+        self._dispatcher: Dispatcher | None = None
         self.user_service: UserService = UserService()
         self.creator_id: int = settings.telegram.creator_id
 
@@ -24,7 +39,11 @@ class BotManager:
         """
         Creates and returns an instance of the bot.
 
-        :return: Bot: Bot instance
+        Raises:
+            ValueError: If the bot token is not set in the configuration.
+
+        Returns:
+            Bot instance
         """
         if not settings.telegram.bot_token:
             logging.error('Bot token is not set in the configuration.')
@@ -43,7 +62,8 @@ class BotManager:
         """
         Creates and returns an instance of the dispatcher.
 
-        :return: Dispatcher: Dispatcher instance
+        Returns:
+            Dispatcher instance
         """
         if self._dispatcher is None:
             self._dispatcher: Dispatcher = Dispatcher()
@@ -64,9 +84,10 @@ class BotManager:
         """
         Creates the creator user if not already present in the database.
 
-        :return: None
+        Returns:
+            None
         """
-        creator: Optional[User] = await self.user_service.get_user_by_telegram_id(self.creator_id)
+        creator: User | None = await self.user_service.get_user_by_telegram_id(self.creator_id)
         if creator is None:
             creator: User = await self.user_service.create_user(
                 telegram_id=self.creator_id,
@@ -78,20 +99,22 @@ class BotManager:
             logging.info('Creator user already exists, skipping creation.')
 
     @property
-    def bot(self) -> Optional[Bot]:
+    def bot(self) -> Bot | None:
         """
         Returns the bot instance.
 
-        :return: Bot: Bot instance
+        Returns:
+            Bot instance
         """
         return self._bot
 
     @property
-    def dispatcher(self) -> Optional[Dispatcher]:
+    def dispatcher(self) -> Dispatcher | None:
         """
         Returns the dispatcher instance.
 
-        :return: Dispatcher: Dispatcher instance
+        Returns:
+            Dispatcher instance
         """
         return self._dispatcher
 
@@ -99,7 +122,11 @@ class BotManager:
         """
         Starts the bot in polling mode.
 
-        :return: None
+        Raises:
+            Exception: If an error occurs while starting polling.
+        
+        Returns:
+            None
         """
         bot: Bot = self.create_bot()
         dp: Dispatcher = self.create_dispatcher()
