@@ -1,16 +1,15 @@
 from token import OP
-from typing import Optional
 from zoneinfo import ZoneInfo
-from pydantic import Field, PrivateAttr
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
 class TelegramBotSettings(BaseSettings):
     """Settings for the Telegram bot"""
-    bot_token: Optional[str] = Field(default=None, description='Bot token')
-    creator_id: Optional[int] = Field(default=None, description='Telegram ID of the bot creator')
-    webhook_url: Optional[str] = Field(default=None, description='Webhook URL')
-    webhook_secret: Optional[str] = Field(default=None, description='Webhook secret key')
+    bot_token: str | None = Field(default=None, description='Bot token')
+    creator_id: int | None = Field(default=None, description='Telegram ID of the bot creator')
+    webhook_url: str | None = Field(default=None, description='Webhook URL')
+    webhook_secret: str | None = Field(default=None, description='Webhook secret key')
 
 
 class DatabaseSettings(BaseSettings):
@@ -40,9 +39,9 @@ class RabbitMQSettings(BaseSettings):
 
 class N8NSettings(BaseSettings):
     """Settings for n8n connection"""
-    n8n_webhook_url: Optional[str] = Field(default=None, description='n8n webhook URL')
-    n8n_webhook_header: Optional[str] = Field(default=None, description='n8n webhook header key')
-    n8n_webhook_secret: Optional[str] = Field(default=None, description='n8n webhook secret key')
+    n8n_webhook_url: str | None = Field(default=None, description='n8n webhook URL')
+    n8n_webhook_header: str | None = Field(default=None, description='n8n webhook header key')
+    n8n_webhook_secret: str | None = Field(default=None, description='n8n webhook secret key')
 
 
 class AppSettings(BaseSettings):
@@ -59,7 +58,8 @@ class AppSettings(BaseSettings):
         """
         Returns the timezone as a ZoneInfo object.
 
-        :return: ZoneInfo object corresponding to the configured timezone
+        Returns:
+            ZoneInfo: Timezone information
         """
         return ZoneInfo(self.timezone)
 
