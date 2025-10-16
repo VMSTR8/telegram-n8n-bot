@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional, List
 
 from app.models import User, UserRole
 from config.settings import settings
@@ -8,35 +7,56 @@ from config.settings import settings
 class UserService:
     """
     Service for managing Telegram bot users.
+
+    Methods:
+        get_user_by_telegram_id: Get user by their Telegram ID.
+        get_user_by_callsign: Get user by their callsign.
+        get_active_user_by_callsign_exclude_creator: Get active user by their callsign excluding creators.
+        create_user: Creates a new user.
+        update_user: Updates user information.
+        set_user_role: Sets the user's role.
+        activate_user: Activates a user.
+        deactivate_user: Deactivates a user.
+        get_users_by_role: Get a list of active users by their role.
+        get_users_without_reservation_exclude_creators: Get a list of active users without reservations (creators are excluded).
     """
 
     @staticmethod
-    async def get_user_by_telegram_id(telegram_id: int) -> Optional[User]:
+    async def get_user_by_telegram_id(telegram_id: int) -> User | None:
         """
         Get user by their Telegram ID.
 
-        :param telegram_id: Telegram ID of the user.
-        :return: User | None - user object or None if not found.
+        Args:
+            telegram_id (int): Telegram ID of the user.
+        
+        Returns:
+            User | None: User object or None if not found.
         """
         return await User.filter(telegram_id=telegram_id).first()
 
     @staticmethod
-    async def get_user_by_callsign(callsign: str) -> Optional[User]:
+    async def get_user_by_callsign(callsign: str) -> User | None:
         """
         Get user by their callsign.
 
-        :param callsign: Callsign of the user.
-        :return: User | None - user object or None if not found.
+        Args:
+            callsign (str): Callsign of the user.
+        
+        Returns:
+            User | None: User object or None if not found.
         """
         return await User.filter(callsign=callsign).first()
 
     @staticmethod
-    async def get_active_user_by_callsign_exclude_creator(callsign: str) -> Optional[User]:
+    async def get_active_user_by_callsign_exclude_creator(callsign: str) -> User | None:
         """
         Get active user by their callsign excluding creators.
 
-        :param callsign: Callsign of the user.
-        :return: User | None - user object or None if not found.
+        Args:
+            callsign (str): Callsign of the user.
+
+        Returns:
+            User | None: User object or None if not found.
         """
         return await User.filter(callsign=callsign, active=True, role__not=UserRole.CREATOR).first()
 
@@ -45,23 +65,26 @@ class UserService:
             telegram_id: int,
             callsign: str,
             role: UserRole = UserRole.USER,
-            first_name: Optional[str] = None,
-            last_name: Optional[str] = None,
-            username: Optional[str] = None,
+            first_name: str | None = None,
+            last_name: str | None = None,
+            username: str | None = None,
     ) -> User:
         """
         Creates a new user.
 
-        :param telegram_id: Telegram ID of the user
-        :param callsign: Callsign of the user
-        :param role: Role of the user (default is USER)
-        :param first_name: First name of the user (if available)
-        :param last_name: Last name of the user (if available)
-        :param username: Username of the user in Telegram (if available)
-        :return: User object
+        Args:
+            telegram_id (int): Telegram ID of the user.
+            callsign (str): Callsign of the user.
+            role (UserRole, optional): Role of the user (USER, ADMIN, CREATOR). Defaults to USER.
+            first_name (str, optional): First name of the user. Defaults to None.
+            last_name (str, optional): Last name of the user. Defaults to None.
+            username (str, optional): Username of the user. Defaults to None.
+        
+        Returns:
+            User: The created User object.
         """
 
-        user = await User.create(
+        user: User = await User.create(
             telegram_id=telegram_id,
             callsign=callsign,
             role=role,
@@ -77,11 +100,14 @@ class UserService:
         """
         Updates user information.
 
-        :param user_telegram_id: Telegram ID of the user to update
-        :param data: Keyword arguments with data to update
-        :return: User object after update
+        Args:
+            user_telegram_id (int): Telegram ID of the user to update.
+            **data: Arbitrary keyword arguments representing the fields to update.
+
+        Returns:
+            User: The updated User object.
         """
-        user = await User.get(telegram_id=user_telegram_id)
+        user: User = await User.get(telegram_id=user_telegram_id)
         for key, value in data.items():
             setattr(user, key, value)
         await user.save()
@@ -95,11 +121,14 @@ class UserService:
         """
         Sets the user's role.
 
-        :param telegram_id: Telegram ID of the user
-        :param new_role: New role of the user (USER, ADMIN)
-        :return: bool - True if the role was successfully set, otherwise False
+        Args:
+            telegram_id (int): Telegram ID of the user.
+            new_role (UserRole): New role to assign to the user.
+
+        Returns:
+            bool: True if the role was successfully set, otherwise False.
         """
-        user = await self.get_user_by_telegram_id(telegram_id=telegram_id)
+        user: User | None = await self.get_user_by_telegram_id(telegram_id=telegram_id)
         if not user:
             return False
 
@@ -114,10 +143,13 @@ class UserService:
         """
         Activates a user.
 
-        :param telegram_id: Telegram ID of the user to activate
-        :return: bool - True if the user was successfully activated, otherwise False
+        Args:
+            telegram_id (int): Telegram ID of the user to activate.
+
+        Returns:
+            bool: True if the user was successfully activated, otherwise False.
         """
-        user = await User.filter(telegram_id=telegram_id, active=False).first()
+        user: User | None = await User.filter(telegram_id=telegram_id, active=False).first()
         if not user:
             return False
 
@@ -132,10 +164,13 @@ class UserService:
         """
         Deactivates a user.
 
-        :param telegram_id: Telegram ID of the user to deactivate
-        :return: bool - True if the user was successfully deactivated, otherwise False
+        Args:
+            telegram_id (int): Telegram ID of the user to deactivate.
+
+        Returns:
+            bool: True if the user was successfully deactivated, otherwise False.
         """
-        user = await User.filter(telegram_id=telegram_id, active=True).first()
+        user: User | None = await User.filter(telegram_id=telegram_id, active=True).first()
         if not user:
             return False
 
@@ -148,21 +183,25 @@ class UserService:
     @staticmethod
     async def get_users_by_role(
             role: UserRole
-    ) -> List[User]:
+    ) -> list[User]:
         """
         Get a list of active users by their role.
 
-        :param role: Role of the user (USER, ADMIN)
-        :return: list[User] - List of users with the specified role
+        Args:
+            role (UserRole): Role of the users to retrieve.
+        
+        Returns:
+            list[User]: List of active users with the specified role.
         """
         return await User.filter(role=role, active=True).all()
 
     @staticmethod
-    async def get_users_without_reservation_exclude_creators() -> List[User]:
+    async def get_users_without_reservation_exclude_creators() -> list[User]:
         """
         Get a list of active users without reservations.
         Creators are excluded from this list.
 
-        :return: list[User] - List of active users without reservations
+        Returns:
+            list[User]: List of active users without reservations (excluding creators).
         """
         return await User.filter(reserved=False, active=True, role__not=UserRole.CREATOR).all()
