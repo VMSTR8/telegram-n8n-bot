@@ -2,7 +2,7 @@ from celery import Celery
 
 from config import settings
 
-celery_app = Celery('telegram_bot')
+celery_app: Celery = Celery('telegram_bot')
 
 celery_app.conf.update(
     broker_url=settings.rabbitmq.url,
