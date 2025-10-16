@@ -1,10 +1,8 @@
 import re
-from datetime import datetime, timedelta
 from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime, timedelta
 
 from app.services import UserService
-
 from config import settings
 
 
@@ -12,20 +10,28 @@ from config import settings
 class ValidationResult:
     """
     Result of validation.
+
+    Attributes:
+        is_valid (bool): Indicates if the validation was successful.
+        error_message (str | None): Error message if validation failed.
+        parsed_datetime (datetime | None): Parsed datetime if applicable.
     """
     is_valid: bool
-    error_message: Optional[str] = None
-    parsed_datetime: Optional[datetime] = None
+    error_message: str | None = None
+    parsed_datetime: datetime | None = None
 
 
 async def validate_callsign_format(callsign: str) -> ValidationResult:
     """
     Validates the format of a callsign.
 
-    :param callsign: The callsign to validate.
-    :return: ValidationResult - result of validation.
+    Args:
+        callsign (str): The callsign to validate.
+    
+    Returns:
+        ValidationResult: Result of validation.
     """
-    user_service = UserService()
+    user_service: UserService = UserService()
 
     if not callsign:
         return ValidationResult(
@@ -58,8 +64,11 @@ async def validate_datetime_format(datetime_str: str) -> ValidationResult:
     """
     Validates the format of a datetime string (YYYY-MM-DD HH:MM).
 
-    :param datetime_str: The datetime string to validate.
-    :return: ValidationResult - result of validation.
+    Args:
+        datetime_str (str): The datetime string to validate.
+    
+    Returns:
+        ValidationResult: Result of validation.
     """
     if not datetime_str:
         return ValidationResult(
@@ -74,8 +83,8 @@ async def validate_datetime_format(datetime_str: str) -> ValidationResult:
         )
 
     try:
-        parsed_datetime = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
-        parsed_datetime = parsed_datetime.replace(tzinfo=settings.timezone_zoneinfo)
+        parsed_datetime: datetime = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
+        parsed_datetime: datetime = parsed_datetime.replace(tzinfo=settings.timezone_zoneinfo)
     except ValueError:
         return ValidationResult(
             is_valid=False,
@@ -88,7 +97,7 @@ async def validate_datetime_format(datetime_str: str) -> ValidationResult:
             error_message='Дата и время не могут быть в прошлом.'
         )
 
-    max_future_date = datetime.now(tz=settings.timezone_zoneinfo) + timedelta(days=180)
+    max_future_date: datetime = datetime.now(tz=settings.timezone_zoneinfo) + timedelta(days=180)
     if parsed_datetime > max_future_date:
         return ValidationResult(
             is_valid=False,
