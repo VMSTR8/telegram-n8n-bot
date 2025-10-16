@@ -1,10 +1,13 @@
 import logging
-from typing import Dict, Any
+from typing import Any
+
+from celery.result import AsyncResult
 
 from app.celery_app import celery_app
 from app.celery_tasks.telegram_tasks import (
     send_telegram_message as celery_send_telegram_message,
-    send_bulk_messages as celery_send_bulk_messages
+    send_bulk_messages as celery_send_bulk_messages,
+    send_and_pin_telegram_message
 )
 
 logger = logging.getLogger(__name__)
@@ -13,6 +16,15 @@ logger = logging.getLogger(__name__)
 class MessageQueueService:
     """
     Service for working with message queue through Celery.
+
+    Attributes:
+        logger (logging.Logger): Logger instance for the service
+    
+    Methods:
+        send_message: Add message to queue for sending
+        send_and_pin_message: Add message to queue for sending and pinning
+        send_bulk_messages: Add multiple messages to queue for sending
+        get_task_status: Get task status
     """
 
     def __init__(self):
@@ -26,21 +38,24 @@ class MessageQueueService:
             disable_web_page_preview: bool = False,
             message_id: int = None,
             message_thread_id: int = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Add message to queue for sending.
         
-        :param chat_id: Chat ID
-        :param text: Message text
-        :param parse_mode: Parse mode
-        :param disable_web_page_preview: Disable web page preview
-        :param message_id: If provided, reply to this message ID
-        :param message_thread_id: Thread ID
-        :return: Result of adding to queue
+        Args:
+            chat_id (int): Chat ID
+            text (str): Message text
+            parse_mode (str): Parse mode
+            disable_web_page_preview (bool): Disable web page preview
+            message_id (int, optional): If provided, reply to this message ID
+            message_thread_id (int, optional): Thread ID
+        
+        Returns:
+            dict: Result of adding to queue
         """
         try:
             # Add task to Celery queue
-            task = celery_send_telegram_message.delay(
+            task: AsyncResult = celery_send_telegram_message.delay(
                 chat_id=chat_id,
                 message_thread_id=message_thread_id,
                 text=text,
@@ -64,33 +79,35 @@ class MessageQueueService:
                 'message': str(e),
                 'chat_id': chat_id
             }
-    
+
     async def send_and_pin_message(
-        self,
-        chat_id: int,
-        text: str,
-        parse_mode: str = 'HTML',
-        disable_web_page_preview: bool = False,
-        message_id: int = None,
-        message_thread_id: int = None,
-        disable_pin_notification: bool = False
-) -> Dict[str, Any]:
+            self,
+            chat_id: int,
+            text: str,
+            parse_mode: str = 'HTML',
+            disable_web_page_preview: bool = False,
+            message_id: int = None,
+            message_thread_id: int = None,
+            disable_pin_notification: bool = False
+    ) -> dict[str, Any]:
         """
         Add message to queue for sending and pinning.
         
-        :param chat_id: Chat ID
-        :param text: Message text
-        :param parse_mode: Parse mode
-        :param disable_web_page_preview: Disable web page preview
-        :param message_id: If provided, reply to this message ID
-        :param message_thread_id: Thread ID
-        :param disable_pin_notification: Disable notification on pin
-        :return: Result of adding to queue
+        Args:
+            chat_id (int): Chat ID
+            text (str): Message text
+            parse_mode (str): Parse mode
+            disable_web_page_preview (bool): Disable web page preview
+            message_id (int, optional): If provided, reply to this message ID
+            message_thread_id (int, optional): Thread ID
+            disable_pin_notification (bool): Disable pin notification
+        
+        Returns:
+            dict: Result of adding to queue
         """
         try:
-            from app.celery_tasks.telegram_tasks import send_and_pin_telegram_message
-            
-            task = send_and_pin_telegram_message.delay(
+
+            task: AsyncResult = send_and_pin_telegram_message.delay(
                 chat_id=chat_id,
                 message_thread_id=message_thread_id,
                 text=text,
@@ -116,15 +133,18 @@ class MessageQueueService:
                 'chat_id': chat_id
             }
 
-    async def send_bulk_messages(self, messages: list) -> Dict[str, Any]:
+    async def send_bulk_messages(self, messages: list) -> dict[str, Any]:
         """
         Add multiple messages to queue for sending.
         
-        :param messages: List of messages
-        :return: Result of adding to queue
+        Args:
+            messages (list): List of message dicts with keys: chat_id, text, parse_mode, disable_web_page_preview, message_id, message_thread_id
+
+        Returns:
+            dict: Result of adding to queue
         """
         try:
-            task = celery_send_bulk_messages.delay(messages)
+            task: AsyncResult = celery_send_bulk_messages.delay(messages)
 
             self.logger.info(f'Bulk messages queued, task ID: {task.id}, count: {len(messages)}')
 
@@ -141,15 +161,18 @@ class MessageQueueService:
                 'message': str(e)
             }
 
-    def get_task_status(self, task_id: str) -> Dict[str, Any]:
+    def get_task_status(self, task_id: str) -> dict[str, Any]:
         """
         Get task status.
         
-        :param task_id: Task ID
-        :return: Task status
+        Args:
+            task_id (str): Task ID
+        
+        Returns:
+            dict: Task status and result if available
         """
         try:
-            result = celery_app.AsyncResult(task_id)
+            result: AsyncResult = celery_app.AsyncResult(task_id)
 
             return {
                 'task_id': task_id,
