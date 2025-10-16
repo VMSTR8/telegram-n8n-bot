@@ -3,7 +3,7 @@ Tortoise ORM configuration.
 """
 from config import settings
 
-TORTOISE_ORM = {
+TORTOISE_ORM: dict = {
     "connections": {
         "default": settings.database.url,
     },
