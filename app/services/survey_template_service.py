@@ -1,11 +1,13 @@
-from typing import Optional
-
 from app.models import SurveyTemplate
 
 
 class SurveyTemplateService:
     """
     Service for managing survey templates.
+
+    Methods:
+        create_survey_template: Creates a new survey template.
+        get_survey_template_by_name: Retrieves a survey template by its name.
     """
 
     @staticmethod
@@ -16,23 +18,29 @@ class SurveyTemplateService:
         """
         Creates a new survey template.
 
-        :param name: Name of the survey template
-        :param json_content: JSON content of the survey template
-        :return: SurveyTemplate - created SurveyTemplate object
+        Args:
+            name (str): Name of the survey template
+            json_content (dict): JSON content of the survey template
+        
+        Returns:
+            SurveyTemplate: The created SurveyTemplate object
         """
         return await SurveyTemplate.create(
             name=name,
             json_content=json_content
         )
-    
+
     @staticmethod
     async def get_survey_template_by_name(
-        name: str
-    ) -> Optional[SurveyTemplate]:
+            name: str
+    ) -> SurveyTemplate | None:
         """
         Gets a survey template by its name.
 
-        :param name: Name of the survey template
-        :return: Optional[SurveyTemplate] - SurveyTemplate object or None if not found
+        Args:
+            name (str): Name of the survey template
+
+        Returns:
+            SurveyTemplate | None: SurveyTemplate object if found, else None
         """
         return await SurveyTemplate.filter(name=name).first()
