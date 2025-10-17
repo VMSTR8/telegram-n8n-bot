@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -7,6 +8,8 @@ from config import settings
 from app.handlers import UserHandlers, AdminHandlers, SystemHandlers
 from app.services import UserService
 from app.models import UserRole, User
+
+logger = logging.getLogger(__name__)
 
 
 class BotManager:
@@ -46,7 +49,7 @@ class BotManager:
             Bot instance
         """
         if not settings.telegram.bot_token:
-            logging.error('Bot token is not set in the configuration.')
+            logger.error('Bot token is not set in the configuration.')
             raise ValueError('Bot token is required to create a Bot instance.')
 
         if self.bot is None:
@@ -54,7 +57,7 @@ class BotManager:
                 token=settings.telegram.bot_token,
                 default=DefaultBotProperties(parse_mode='HTML')
             )
-            logging.info('Bot instance created successfully.')
+            logger.info('Bot instance created successfully.')
 
         return self._bot
 
@@ -76,7 +79,7 @@ class BotManager:
             self._dispatcher.include_router(admin_handlers.router)
             self._dispatcher.include_router(system_handlers.router)
 
-            logging.info('Dispatcher created and handlers registered successfully.')
+            logger.info('Dispatcher created and handlers registered successfully.')
 
         return self._dispatcher
     
@@ -94,9 +97,9 @@ class BotManager:
                 callsign='creator',
                 role=UserRole.CREATOR
             )
-            logging.info(f'User with "CREATOR" role created: {creator.callsign.capitalize()}')
+            logger.info('User with "CREATOR" role created: %s', creator.callsign.capitalize())
         else:
-            logging.info('Creator user already exists, skipping creation.')
+            logger.info('Creator user already exists, skipping creation.')
 
     @property
     def bot(self) -> Bot | None:
@@ -131,8 +134,8 @@ class BotManager:
         bot: Bot = self.create_bot()
         dp: Dispatcher = self.create_dispatcher()
         try:
-            logging.info('Starting bot in polling mode...')
+            logger.info('Starting bot in polling mode...')
             await dp.start_polling(bot)
         except Exception as e:
-            logging.error(f"Error occurred while starting polling: {e}")
+            logger.error('Error occurred while starting polling: %s\n%s', str(e), traceback.format_exc())
             raise
