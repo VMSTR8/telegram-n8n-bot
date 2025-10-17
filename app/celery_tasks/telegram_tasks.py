@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import traceback
 import time
 from asyncio import TimeoutError
 from contextlib import asynccontextmanager
@@ -56,13 +57,13 @@ def _handle_network_error(self, chat_id: int, e: Exception) -> dict[str, Any]:
     retry_count: int = self.request.retries
     retry_delay: int = min(300, (2 ** retry_count) * 10)
     logger.warning(
-        f'Network error for chat {chat_id}: {e}. '
-        f'Retry {retry_count + 1}/{self.max_retries} in {retry_delay}s'
+        'Network error for chat %s: %s. Retry %d/%d in %d seconds',
+        chat_id, str(e), retry_count + 1, self.max_retries, retry_delay
     )
     if retry_count < self.max_retries:
         raise self.retry(countdown=retry_delay, exc=e)
     else:
-        logger.error(f'Max retries exceeded for chat {chat_id}. Network error: {e}')
+        logger.error('Max retries exceeded for chat %s. Network error: %s', chat_id, str(e))
         return {'status': 'error', 'message': f'Network error after {self.max_retries} retries: {str(e)}'}
 
 
@@ -111,13 +112,13 @@ def send_telegram_message(
     try:
         result: Message = asyncio.run(_send_message())
 
-        logger.info(f'Message sent successfully to chat {chat_id}')
+        logger.info('Message sent successfully to chat %s, message ID: %s', chat_id, result.message_id)
         return {'status': 'success', 'message_id': result.message_id}
 
     except TelegramRetryAfter as e:
         # Handling 429 error - retry after specified time
         retry_after: int = e.retry_after
-        logger.warning(f'Rate limit hit for chat {chat_id}. Retrying after {retry_after}s')
+        logger.warning('Rate limit hit for chat %s. Retrying after %d seconds', chat_id, retry_after)
 
         # Retry task after retry_after seconds
         raise self.retry(countdown=retry_after, max_retries=5)
@@ -132,11 +133,11 @@ def send_telegram_message(
                     'cannot connect', 'connection', 'timeout', 'network'
                 ]
         ):
-            logger.warning(f'Telegram API error for chat {chat_id}: {e}')
+            logger.warning('Telegram API error for chat %s: %s', chat_id, str(e))
             return _handle_network_error(self, chat_id, ClientConnectionError(error_message))
 
     except Exception as e:
-        logger.error(f'Unexpected error sending message to chat {chat_id}: {e}')
+        logger.error('Unexpected error sending message to chat %s: %s\n%s', chat_id, str(e), traceback.format_exc())
         return {'status': 'error', 'message': str(e)}
 
 
@@ -193,12 +194,12 @@ def send_and_pin_telegram_message(
     try:
         result: Message = asyncio.run(_send_and_pin())
 
-        logger.info(f'Message sent and pinned successfully to chat {chat_id}')
+        logger.info('Message sent and pinned successfully to chat %s', chat_id)
         return {'status': 'success', 'message_id': result.message_id}
 
     except TelegramRetryAfter as e:
         retry_after: int = e.retry_after
-        logger.warning(f'Rate limit hit for chat {chat_id}. Retrying after {retry_after}s')
+        logger.warning('Rate limit hit for chat %s. Retrying after %d seconds', chat_id, retry_after)
 
         raise self.retry(countdown=retry_after, max_retries=5)
 
@@ -212,11 +213,11 @@ def send_and_pin_telegram_message(
                     'cannot connect', 'connection', 'timeout', 'network'
                 ]
         ):
-            logger.warning(f'Telegram API error for chat {chat_id}: {e}')
+            logger.warning('Telegram API error for chat %s: %s', chat_id, str(e))
             return _handle_network_error(self, chat_id, ClientConnectionError(error_message))
 
     except Exception as e:
-        logger.error(f'Unexpected error sending message to chat {chat_id}: {e}')
+        logger.error('Unexpected error sending message to chat %s: %s\n%s', chat_id, str(e), traceback.format_exc())
         return {'status': 'error', 'message': str(e)}
 
 
@@ -247,7 +248,7 @@ def ban_user_from_chat(self, chat_id: int, user_id: int) -> dict[str, Any] | Non
 
     except TelegramRetryAfter as e:
         retry_after: int = e.retry_after
-        logger.warning(f'Rate limit hit for chat {chat_id}. Retrying after {retry_after}s')
+        logger.warning('Rate limit hit for chat %s. Retrying after %d seconds', chat_id, retry_after)
 
         raise self.retry(countdown=retry_after, max_retries=5)
 
@@ -265,7 +266,7 @@ def ban_user_from_chat(self, chat_id: int, user_id: int) -> dict[str, Any] | Non
             return _handle_network_error(self, chat_id, ClientConnectionError(error_message))
 
     except Exception as e:
-        logger.error(f'Error banning user {user_id} from chat {chat_id}: {e}')
+        logger.error('Error banning user %s from chat %s: %s\n%s', user_id, chat_id, str(e), traceback.format_exc())
         return {'status': 'error', 'message': str(e)}
 
 
@@ -302,10 +303,10 @@ def send_bulk_messages(self, messages: list) -> list[dict[str, Any]]:
             results.append(result.get())
 
             if i < len(messages) - 1:
-                time.sleep(0.1)
+                time.sleep(1)
 
         except Exception as e:
-            logger.error(f'Error in bulk send: {e}')
+            logger.error('Error in bulk send for message %d: %s\n%s', i, str(e), traceback.format_exc())
             results.append({'status': 'error', 'message': str(e)})
 
     return results
