@@ -5,6 +5,15 @@ from pydantic import BaseModel
 class SurveySchema(BaseModel):
     """
     Schema for survey data.
+
+    Attributes:
+        id (int): Internal database ID of the survey
+        google_form_id (str): Google Form ID associated with the survey
+        title (str): Title of the survey
+        form_url (str): URL of the Google Form
+        created_at (datetime): Timestamp when the survey was created
+        ended_at (datetime | None): Timestamp when the survey ended
+        expired (bool): Indicates if the survey has expired
     """
     id: int
     google_form_id: str
