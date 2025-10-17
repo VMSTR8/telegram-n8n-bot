@@ -1,5 +1,3 @@
-from typing import Any
-
 from aiogram import Router
 from aiogram.filters import ChatMemberUpdatedFilter, IS_MEMBER, IS_NOT_MEMBER
 from aiogram.types import ChatMemberUpdated, User as TelegramUser, Chat as TelegramChat
