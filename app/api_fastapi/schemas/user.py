@@ -19,6 +19,19 @@ class UserRole(str, Enum):
 class UserSchema(BaseModel):
     """
     User schema for the Telegram bot
+
+    Attributes:
+        id (int): Internal database ID of the user
+        telegram_id (int): Telegram ID of the user
+        username (str | None): Telegram username of the user
+        first_name (str | None): First name of the user
+        last_name (str | None): Last name of the user
+        callsign (str): Unique callsign for the user
+        role (UserRole): Role of the user in the system
+        active (bool): Indicates if the user is active
+        created_at (datetime): Timestamp when the user was created
+        updated_at (datetime): Timestamp when the user was last updated
+        reserved (bool): Indicates if the user is reserved
     """
     id: int
     telegram_id: int
