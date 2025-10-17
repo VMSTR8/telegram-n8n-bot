@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Header, Depends, Request
@@ -23,6 +24,7 @@ from app.services import (
 )
 from config import settings
 
+logger = logging.getLogger(__name__)
 n8n_webhook_router: APIRouter = APIRouter()
 
 
@@ -39,6 +41,9 @@ async def _prepare_not_answered_users_object(
         user_service (UserService): Instance of UserService to fetch user details.
         survey_responses (SurveyResponseSchema): The survey responses data.
 
+    Raises:
+        HTTPException: If any error occurs during processing.
+
     Returns:
         A tuple containing the survey object and a dictionary
         of users who did not answer the survey. The dictionary keys are user callsigns, and
@@ -52,31 +57,39 @@ async def _prepare_not_answered_users_object(
     # otherwise n8n does not reach this route and does not send any data
     # And yes, this function is called in try-except block
 
-    survey: Survey = \
-        await survey_service.get_survey_by_google_form_id(survey_responses.google_form_id)
+    try:
+        survey: Survey = \
+            await survey_service.get_survey_by_google_form_id(survey_responses.google_form_id)
 
-    answers_list: list[str] = [
-        answer.answer.lower() for answer in survey_responses.answers
-    ]
+        answers_list: list[str] = [
+            answer.answer.lower() for answer in survey_responses.answers
+        ]
 
-    users_without_reservation: list[User] = \
-        await user_service.get_users_without_reservation_exclude_creators()
+        users_without_reservation: list[User] = \
+            await user_service.get_users_without_reservation_exclude_creators()
 
-    callsign_to_data: dict[str, dict[str, Any]] = {
-        user.callsign: {
-            'telegram_id': user.telegram_id,
-            'username': user.username,
-            'first_name': user.first_name,
-            'last_name': user.last_name
-        } for user in users_without_reservation
-    }
+        callsign_to_data: dict[str, dict[str, Any]] = {
+            user.callsign: {
+                'telegram_id': user.telegram_id,
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name
+            } for user in users_without_reservation
+        }
 
-    not_answered_users: dict[str, dict[str, Any]] = {
-        callsign: data for callsign, data in callsign_to_data.items()
-        if callsign.lower() not in answers_list
-    }
+        not_answered_users: dict[str, dict[str, Any]] = {
+            callsign: data for callsign, data in callsign_to_data.items()
+            if callsign.lower() not in answers_list
+        }
 
-    return survey, not_answered_users
+        return survey, not_answered_users
+    
+    except ValueError as ve:
+        logger.error('Validation error in _prepare_not_answered_users_object: %s', str(ve))
+        raise HTTPException(status_code=400, detail='Invalid survey responses data.') from ve
+    except Exception as e:
+        logger.error('Unexpected error in _prepare_not_answered_users_object: %s\n%s', str(e), traceback.format_exc())
+        raise HTTPException(status_code=500, detail='Internal Server Error while preparing survey data.') from e
 
 
 @n8n_webhook_router.post(path='/webhook/new-form', response_model=dict[str, Any])
@@ -115,8 +128,8 @@ async def new_form_webhook(
         bound_thread_id: int | None = bound_chat.thread_id if bound_chat else None
 
         if not bound_chat:
-            logging.error('No bound chat found to send the form data.')
-            raise HTTPException(status_code=400, detail='No bound chat found.')
+            logger.warning('No bound chat found to send the form data.')
+            raise HTTPException(status_code=400, detail='No bound chat configured for sending form notifications.')
 
         new_form_text: str = (
             f'Запущен новый опрос:\n\n'
@@ -134,12 +147,14 @@ async def new_form_webhook(
         )
 
         return {'status': 'received', 'data': form_data.model_dump()}
-
+    
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f'Error processing new form data: {e}')
+        logger.error('Error processing new form webhook: %s\n%s', str(e), traceback.format_exc())
         raise HTTPException(
-            status_code=500, detail='Internal Server Error'
-        )
+            status_code=500, detail='Internal Server Error while processing new form.'
+        ) from e
 
 
 @n8n_webhook_router.post(path='/webhook/send-survey-completion-status', response_model=dict[str, Any])
@@ -180,8 +195,8 @@ async def survey_completion_status_webhook(
         bound_thread_id: int | None = bound_chat.thread_id if bound_chat else None
 
         if not bound_chat:
-            logging.error('No bound chat found to send the survey completion status.')
-            raise HTTPException(status_code=400, detail='No bound chat found.')
+            logger.warning('No bound chat found to send the survey completion status.')
+            raise HTTPException(status_code=400, detail='No bound chat configured for sending survey completion status.')
 
         survey, not_answered_users = await _prepare_not_answered_users_object(
             survey_service=survey_service,
@@ -230,11 +245,13 @@ async def survey_completion_status_webhook(
 
         return {'status': 'received', 'data': survey_responses}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f'Error processing survey completion status: {e}')
+        logger.error('Error processing survey completion status: %s\n%s', str(e), traceback.format_exc())
         raise HTTPException(
-            status_code=500, detail='Internal Server Error'
-        )
+            status_code=500, detail='Internal Server Error while processing survey completion status.'
+        ) from e
 
 
 @n8n_webhook_router.post(path='/webhook/send-survey-finished', response_model=dict[str, Any])
@@ -280,8 +297,8 @@ async def send_survey_finished_webhook(
         bound_thread_id: int | None = bound_chat.thread_id if bound_chat else None
 
         if not bound_chat:
-            logging.error('No bound chat found to send the survey finished message.')
-            raise HTTPException(status_code=400, detail='No bound chat found.')
+            logger.warning('No bound chat found to send the survey finished message.')
+            raise HTTPException(status_code=400, detail='No bound chat configured for sending survey finished message.')
 
         survey, not_answered_users = await _prepare_not_answered_users_object(
             survey_service=survey_service,
@@ -361,8 +378,10 @@ async def send_survey_finished_webhook(
             'users_with_three_penalties': users_with_three_penalties
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f'Error processing survey finished data: {e}')
+        logger.error('Error processing survey finished data: %s\n%s', str(e), traceback.format_exc())
         raise HTTPException(
-            status_code=500, detail='Internal Server Error'
-        )
+            status_code=500, detail='Internal Server Error while processing survey finished data.'
+        ) from e
