@@ -1,8 +1,10 @@
 import logging
+import traceback
 from tortoise import Tortoise
 from config import settings
 import sys
 
+logger = logging.getLogger(__name__)
 
 async def init_database() -> None:
     """
@@ -20,10 +22,10 @@ async def init_database() -> None:
             modules={'models': ['app.models']}
         )
         await Tortoise.get_connection("default").execute_query("SELECT 1;")
-        logging.info('Database connection check successful.')
+        logger.info('Database connection checked successfully.')
 
     except Exception as e:
-        logging.error(f'Error occurred during database initialization: {e}')
+        logger.error('Failed to initialize database: %s\n%s', str(e), traceback.format_exc())
         sys.exit(1)
 
 
@@ -39,7 +41,7 @@ async def close_database() -> None:
     """
     try:
         await Tortoise.close_connections()
-        logging.info('Database connections closed successfully.')
+        logger.info('Database connections closed successfully.')
     except Exception as e:
-        logging.error(f'Error occurred while closing database connections: {e}')
+        logger.error('Failed to close database connections: %s\n%s', str(e), traceback.format_exc())
         raise
