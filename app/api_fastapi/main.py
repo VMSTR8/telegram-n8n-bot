@@ -1,4 +1,5 @@
 import logging
+import traceback
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -13,6 +14,8 @@ from app.bot_telegram import (
     BotManager
 )
 from config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -32,18 +35,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Returns:
         None
     """
-    logging.info('Starting application in production mode...')
+    logger.info('Starting FastAPI application in production mode...')
 
     try:
         await init_database()
-        logging.info('Database initialized successfully.')
+        logger.info('Database initialized successfully.')
     except Exception as e:
-        logging.error(f'Error occurred during database initialization: {e}')
+        logger.error('Failed to initialize database: %s\n%s', str(e), traceback.format_exc())
         raise
 
     try:
         bot_manager: BotManager = BotManager()
         await bot_manager.ensure_creator_exists()
+        logger.info('Bot manager initialized and creator verified.')
         
         bot: Bot = bot_manager.create_bot()
         
@@ -52,31 +56,39 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             url=webhook_url,
             secret_token=settings.telegram.webhook_secret
         )
-        logging.info(f'Webhook successfully set at: {webhook_url}')
+        logger.info('Webhook set successfully at URL: %s', webhook_url)
 
         app.state.bot_manager = bot_manager
+        logger.info('Application started successfully in webhook mode.')
 
     except Exception as e:
-        logging.error(f'Error occurred while setting webhook: {e}')
-
-    logging.info('Application started successfully in webhook mode.')
+        logger.error('Error occurred while setting webhook: %s\n%s', str(e), traceback.format_exc())
+        if bot_manager and bot_manager.bot:
+            try:
+                await bot_manager.bot.delete_webhook(drop_pending_updates=True)
+                await bot_manager.bot.session.close()
+                logger.info('Cleaned up bot resources after failure.')
+            except Exception:
+                pass
+        raise
 
     yield
 
     # Shutdown
+    logger.info('Shutting down FastAPI application...')
     try:
         bot_manager: BotManager = getattr(app.state, 'bot_manager', None)
         
         if bot_manager and bot_manager.bot:
             await bot_manager.bot.delete_webhook(drop_pending_updates=True)
             await bot_manager.bot.session.close()
-            logging.info('Webhook deleted and bot session closed.')
+            logger.info('Webhook deleted and bot session closed successfully.')
 
         await close_database()
-        logging.info('Database closed successfully.')
+        logger.info('Database closed successfully.')
 
     except Exception as e:
-        logging.error(f'Error occurred during shutdown: {e}')
+        logger.error('Error during shutdown: %s\n%s', str(e), traceback.format_exc())
 
 
 def create_app() -> FastAPI:
