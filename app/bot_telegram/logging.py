@@ -2,6 +2,8 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 
 def setup_logging() -> None:
     """
@@ -52,4 +54,4 @@ def setup_logging() -> None:
     aiogram_events_logger: logging.Logger = logging.getLogger('aiogram')
     aiogram_events_logger.setLevel(logging.WARNING)
 
-    logging.info('Logging is set up.')
+    logger.info('Logging is set up.')
