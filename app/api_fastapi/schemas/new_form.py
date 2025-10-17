@@ -6,6 +6,15 @@ from pydantic import BaseModel, field_validator
 class NewFormDataSchema(BaseModel):
     """
     Schema for new form data received from n8n.
+
+    Attributes:
+        id (int): Internal database ID of the form
+        google_form_id (str): Google form ID
+        title (str): Title of the form
+        form_url (str): URL of the Google form
+        created_at (datetime): Creation date and time of the form
+        ended_at (datetime): End date and time of the form
+        expired (bool): Whether the form is expired
     """
     id: int
     google_form_id: str
