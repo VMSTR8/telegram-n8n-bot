@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import Any
 
 from aiogram import Bot, Dispatcher
@@ -11,6 +12,7 @@ from app.api_fastapi.dependencies import (
 )
 from app.decorators import FastAPIValidate
 
+logger = logging.getLogger(__name__)
 telegram_webhook_router: APIRouter = APIRouter()
 
 
@@ -42,8 +44,8 @@ async def telegram_webhook(
         return {'status': 'ok'}
 
     except Exception as e:
-        logging.error(f'Error processing Telegram update: {e}')
-        raise HTTPException(status_code=500, detail='Internal Server Error')
+        logger.error('Error processing Telegram update: %s\n%s', str(e), traceback.format_exc())
+        raise HTTPException(status_code=500, detail='Internal Server Error while processing Telegram update.') from e
 
 
 @telegram_webhook_router.get(path='/webhook/health', response_model=dict[str, str])
