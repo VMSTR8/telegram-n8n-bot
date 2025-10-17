@@ -1,4 +1,5 @@
 import logging
+import traceback
 from functools import wraps
 from typing import Callable, Awaitable, TypeVar
 
@@ -6,6 +7,7 @@ from fastapi import HTTPException, Request
 
 from config import settings
 
+logger = logging.getLogger(__name__)
 T = TypeVar('T')
 
 
@@ -53,20 +55,18 @@ class FastAPIValidate:
                 secret_header: str | None = request.headers.get(header_name)
 
                 if not secret or not secret_header:
-                    logging.error('Verifying webhook signature failed.')
+                    logger.error('Webhook signature validation failed: missing header or secret %s', header_name)
                     raise HTTPException(status_code=error_status_code, detail=error_detail)
 
                 normalized_header: str = str(secret_header).strip()
                 normalized_secret: str = str(secret).strip()
 
                 if len(normalized_header) < 1 or len(normalized_secret) < 1:
-                    logging.error(
-                        'Verifying webhook signature failed due to empty values.'
-                    )
+                    logger.error('Webhook signature validation failed: empty header or secret for %s', header_name)
                     raise HTTPException(status_code=error_status_code, detail=error_detail)
 
                 if normalized_secret != normalized_header:
-                    logging.error('Invalid webhook signature received.')
+                    logger.error('Webhook signature validation failed: invalid signature for header %s', header_name)
                     raise HTTPException(status_code=error_status_code, detail=error_detail)
 
                 return await func(*args, request=request, **kwargs)
