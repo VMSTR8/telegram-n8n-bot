@@ -1,4 +1,5 @@
 import logging
+import traceback
 from asyncio import run
 import sys
 
@@ -10,6 +11,7 @@ from app.bot_telegram import (
 )
 from app.bot_telegram import init_database
 
+logger = logging.getLogger(__name__)
 
 async def main() -> None:
     """
@@ -20,12 +22,12 @@ async def main() -> None:
     """
     setup_logging()
 
-    logging.info('Starting application in development mode...')
+    logger.info('Starting application in development mode...')
 
     bot: BotManager = BotManager()
 
     await init_database()
-    logging.info('Database initialized successfully.')
+    logger.info('Database initialized successfully.')
 
     await bot.ensure_creator_exists()
 
@@ -40,7 +42,7 @@ def run_webhook_mode() -> None:
         None
     """
     setup_logging()
-    logging.info('Starting application in webhook mode...')
+    logger.info('Starting application in webhook mode...')
 
     uvicorn.run(
         app='app.api_fastapi:telegrambot_app',
@@ -61,7 +63,7 @@ def run_polling_mode() -> None:
     try:
         run(main())
     except Exception as e:
-        logging.error(f'Error occurred while starting the bot: {e}')
+        logger.error('Error occurred while starting the bot: %s\n%s', str(e), traceback.format_exc())
         sys.exit(1)
 
 
