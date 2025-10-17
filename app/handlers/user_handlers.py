@@ -1,4 +1,5 @@
 import logging
+import traceback
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -11,6 +12,8 @@ from app.decorators import AuthDecorators as Auth
 from app.decorators import CallsignDecorators as Callsign
 from app.services import UserService, ChatService, SurveyService, MessageQueueService
 from config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class UserHandlers:
@@ -172,21 +175,21 @@ class UserHandlers:
                 message_id=message.message_id
             )
 
-        except ValueError as e:
+        except ValueError as ve:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
-                text=f'❌ Ошибка регистрации: {e}',
+                text=f'❌ Ошибка регистрации: {ve}',
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
         except Exception as e:
+            logger.error('Error occurred during registration: %s\n%s', e, traceback.format_exc())
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Произошла ошибка при регистрации. Пожалуйста, попробуйте позже.',
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
-            logging.error(f'Error occurred during registration: {e}')
 
     @Auth.required_user_registration
     @Callsign.validate_callsign_update
@@ -228,21 +231,21 @@ class UserHandlers:
                 message_id=message.message_id
             )
 
-        except ValueError as e:
+        except ValueError as ve:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
-                text=f'❌ Ошибка обновления профиля: {e}',
+                text=f'❌ Ошибка обновления профиля: {ve}',
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
         except Exception as e:
+            logger.error('Error occurred while updating user profile: %s\n%s', e, traceback.format_exc())
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
                 text='❌ Произошла ошибка при обновлении профиля. Пожалуйста, попробуйте позже.',
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
-            logging.error(f'Error occurred while updating user profile: {e}')
 
     @Auth.required_user_registration
     async def profile_command(self, message: Message) -> None:
