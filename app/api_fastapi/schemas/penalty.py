@@ -5,6 +5,13 @@ from pydantic import BaseModel
 class PenaltySchema(BaseModel):
     """
     Schema for representing a penalty assigned to a user for survey-related infractions.
+
+    Attributes:
+        id (int): Internal database ID of the penalty
+        user (int): ID of the user who received the penalty
+        survey (int): ID of the survey associated with the penalty
+        reason (str): Reason for the penalty
+        penalty_date (datetime): Date and time when the penalty was assigned
     """
     id: int
     user: int
