@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import Any
 
 from celery.result import AsyncResult
@@ -16,9 +17,6 @@ logger = logging.getLogger(__name__)
 class MessageQueueService:
     """
     Service for working with message queue through Celery.
-
-    Attributes:
-        logger (logging.Logger): Logger instance for the service
     
     Methods:
         send_message: Add message to queue for sending
@@ -26,9 +24,6 @@ class MessageQueueService:
         send_bulk_messages: Add multiple messages to queue for sending
         get_task_status: Get task status
     """
-
-    def __init__(self):
-        self.logger = logger
 
     async def send_message(
             self,
@@ -64,7 +59,7 @@ class MessageQueueService:
                 message_id=message_id
             )
 
-            self.logger.info(f'Message queued for chat {chat_id}, task ID: {task.id}')
+            logger.info('Message queued for chat %s, task ID: %s', chat_id, task.id)
 
             return {
                 'status': 'queued',
@@ -73,7 +68,7 @@ class MessageQueueService:
             }
 
         except Exception as e:
-            self.logger.error(f'Error queuing message for chat {chat_id}: {e}')
+            logger.error('Error queuing message for chat %s: %s\n%s', chat_id, str(e), traceback.format_exc())
             return {
                 'status': 'error',
                 'message': str(e),
@@ -117,7 +112,7 @@ class MessageQueueService:
                 disable_pin_notification=disable_pin_notification
             )
 
-            self.logger.info(f'Message queued for sending and pinning in chat {chat_id}, task ID: {task.id}')
+            logger.info('Message queued for sending and pinning in chat %s, task ID: %s', chat_id, task.id)
 
             return {
                 'status': 'queued',
@@ -126,7 +121,7 @@ class MessageQueueService:
             }
 
         except Exception as e:
-            self.logger.error(f'Error queuing send-and-pin message for chat {chat_id}: {e}')
+            logger.error('Error queuing send-and-pin message for chat %s: %s\n%s', chat_id, str(e), traceback.format_exc())
             return {
                 'status': 'error',
                 'message': str(e),
@@ -146,7 +141,7 @@ class MessageQueueService:
         try:
             task: AsyncResult = celery_send_bulk_messages.delay(messages)
 
-            self.logger.info(f'Bulk messages queued, task ID: {task.id}, count: {len(messages)}')
+            logger.info('Bulk messages queued, task ID: %s, count: %s', task.id, len(messages))
 
             return {
                 'status': 'queued',
@@ -155,7 +150,7 @@ class MessageQueueService:
             }
 
         except Exception as e:
-            self.logger.error(f'Error queuing bulk messages: {e}')
+            logger.error('Error queuing bulk messages: %s\n%s', str(e), traceback.format_exc())
             return {
                 'status': 'error',
                 'message': str(e)
@@ -181,7 +176,7 @@ class MessageQueueService:
             }
 
         except Exception as e:
-            self.logger.error(f'Error getting task status for {task_id}: {e}')
+            logger.error('Error getting task status for %s: %s', task_id, str(e))
             return {
                 'task_id': task_id,
                 'status': 'error',
