@@ -85,25 +85,15 @@ class ChatService:
 
             return chat
 
-    async def unbind_chat(
-            self,
-            telegram_id: int
-    ) -> bool:
+    @staticmethod
+    async def unbind_chat() -> int:
         """
-        Unbinds a chat by its Telegram ID.
+        Unbinds the currently bound chat by deleting it from the database.
 
-        Args:
-            telegram_id (int): Telegram chat ID
-        
         Returns:
-            True if the chat was deleted, False if not found
+            Number of deleted chats
         """
-        chat: Chat | None = await self.get_chat_by_telegram_id(telegram_id=telegram_id)
-        if not chat:
-            return False
-
-        await chat.delete()
-        return True
+        return await Chat.all().delete()
 
     async def set_thread_id(
             self,
