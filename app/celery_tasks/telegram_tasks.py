@@ -1,10 +1,10 @@
 import asyncio
 import logging
-import traceback
 import time
+import traceback
 from asyncio import TimeoutError
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import AsyncGenerator
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter, TelegramAPIError
@@ -13,13 +13,14 @@ from aiohttp import ClientConnectionError, ClientError
 from celery.result import AsyncResult
 
 from app.celery_app import celery_app
+from app.schemas import TaskResponse
 from config import settings
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def bot_context() -> AsyncGenerator[Bot, None]:
+async def _bot_context() -> AsyncGenerator[Bot, None]:
     """
     Asynchronous context manager to create and close a Bot instance.
 
@@ -39,7 +40,7 @@ async def bot_context() -> AsyncGenerator[Bot, None]:
         await bot.session.close()
 
 
-def _handle_network_error(self, chat_id: int, e: Exception) -> dict[str, Any]:
+def _handle_network_error(self, chat_id: int, e: Exception) -> TaskResponse:
     """
     Handle network-related errors with exponential backoff retries.
 
@@ -52,7 +53,7 @@ def _handle_network_error(self, chat_id: int, e: Exception) -> dict[str, Any]:
         self.retry: Retries the task with exponential backoff.
     
     Returns:
-        A dictionary with error status and message.
+        A TaskResponse object with error status and message.
     """
     retry_count: int = self.request.retries
     retry_delay: int = min(300, (2 ** retry_count) * 10)
@@ -64,7 +65,7 @@ def _handle_network_error(self, chat_id: int, e: Exception) -> dict[str, Any]:
         raise self.retry(countdown=retry_delay, exc=e)
     else:
         logger.error('Max retries exceeded for chat %s. Network error: %s', chat_id, str(e))
-        return {'status': 'error', 'message': f'Network error after {self.max_retries} retries: {str(e)}'}
+        return TaskResponse(status='error', message=f'Network error after {self.max_retries} retries: {str(e)}')
 
 
 @celery_app.task(bind=True, max_retries=5, ignore_result=True)
@@ -76,7 +77,7 @@ def send_telegram_message(
         disable_web_page_preview: bool = False,
         message_id: int = None,
         message_thread_id: int = None
-) -> dict[str, Any] | None:
+) -> TaskResponse | None:
     """
     Send a message to Telegram via Celery.
     
@@ -93,11 +94,11 @@ def send_telegram_message(
         self.retry: Retries the task in case of rate limiting or network errors.
     
     Returns:
-        A dictionary with sending status and message ID on success, or error details on failure.
+        A TaskResponse object with sending status and message ID on success, or error details on failure.
     """
 
     async def _send_message():
-        async with bot_context() as bot:
+        async with _bot_context() as bot:
             send_result: Message = await bot.send_message(
                 chat_id=chat_id,
                 message_thread_id=message_thread_id,
@@ -113,7 +114,7 @@ def send_telegram_message(
         result: Message = asyncio.run(_send_message())
 
         logger.info('Message sent successfully to chat %s, message ID: %s', chat_id, result.message_id)
-        return {'status': 'success', 'message_id': result.message_id}
+        return TaskResponse(status='success', message_id=result.message_id)
 
     except TelegramRetryAfter as e:
         # Handling 429 error - retry after specified time
@@ -138,7 +139,7 @@ def send_telegram_message(
 
     except Exception as e:
         logger.error('Unexpected error sending message to chat %s: %s\n%s', chat_id, str(e), traceback.format_exc())
-        return {'status': 'error', 'message': str(e)}
+        return TaskResponse(status='error', message=str(e))
 
 
 @celery_app.task(bind=True, max_retries=5, ignore_result=True)
@@ -151,7 +152,7 @@ def send_and_pin_telegram_message(
         message_id: int = None,
         message_thread_id: int = None,
         disable_pin_notification: bool = False
-) -> dict[str, Any] | None:
+) -> TaskResponse | None:
     """
     Send a message to Telegram and pin it via Celery.
 
@@ -173,7 +174,7 @@ def send_and_pin_telegram_message(
     """
 
     async def _send_and_pin():
-        async with bot_context() as bot:
+        async with _bot_context() as bot:
             send_result: Message = await bot.send_message(
                 chat_id=chat_id,
                 message_thread_id=message_thread_id,
@@ -195,7 +196,7 @@ def send_and_pin_telegram_message(
         result: Message = asyncio.run(_send_and_pin())
 
         logger.info('Message sent and pinned successfully to chat %s', chat_id)
-        return {'status': 'success', 'message_id': result.message_id}
+        return TaskResponse(status='success', message_id=result.message_id)
 
     except TelegramRetryAfter as e:
         retry_after: int = e.retry_after
@@ -218,11 +219,11 @@ def send_and_pin_telegram_message(
 
     except Exception as e:
         logger.error('Unexpected error sending message to chat %s: %s\n%s', chat_id, str(e), traceback.format_exc())
-        return {'status': 'error', 'message': str(e)}
+        return TaskResponse(status='error', message=str(e))
 
 
 @celery_app.task(bind=True, max_retries=3, ignore_result=True)
-def ban_user_from_chat(self, chat_id: int, user_id: int) -> dict[str, Any] | None:
+def ban_user_from_chat(self, chat_id: int, user_id: int) -> TaskResponse | None:
     """
     Ban a user from a Telegram chat via Celery.
     
@@ -235,16 +236,16 @@ def ban_user_from_chat(self, chat_id: int, user_id: int) -> dict[str, Any] | Non
         self.retry: Retries the task in case of rate limiting or network errors.
     
     Returns:
-        A dictionary with banning status on success, or error details on failure.
+        A TaskResponse object with banning status on success, or error details on failure.
     """
     try:
         async def _ban_user():
-            async with bot_context() as bot:
+            async with _bot_context() as bot:
                 await bot.ban_chat_member(chat_id=chat_id, user_id=user_id)
                 logger.info(f'User {user_id} banned from chat {chat_id}')
 
         asyncio.run(_ban_user())
-        return {'status': 'success', 'detail': f'User {user_id} banned from chat {chat_id}'}
+        return TaskResponse(status='success', detail=f'User {user_id} banned from chat {chat_id}')
 
     except TelegramRetryAfter as e:
         retry_after: int = e.retry_after
@@ -267,11 +268,11 @@ def ban_user_from_chat(self, chat_id: int, user_id: int) -> dict[str, Any] | Non
 
     except Exception as e:
         logger.error('Error banning user %s from chat %s: %s\n%s', user_id, chat_id, str(e), traceback.format_exc())
-        return {'status': 'error', 'message': str(e)}
+        return TaskResponse(status='error', message=str(e))
 
 
 @celery_app.task(bind=True, max_retries=3, ignore_result=True)
-def send_bulk_messages(self, messages: list) -> list[dict[str, Any]]:
+def send_bulk_messages(self, messages: list) -> list[TaskResponse]:
     """
     Send multiple messages with controlled speed.
     
@@ -286,9 +287,9 @@ def send_bulk_messages(self, messages: list) -> list[dict[str, Any]]:
             - message_thread_id: Thread ID for topics [optional]
     
     Returns:
-        A list of dictionaries with sending status for each message.
+        A list of TaskResponse objects with sending status for each message.
     """
-    results: list[dict[str, Any]] = []
+    results: list[TaskResponse] = []
 
     for i, message_data in enumerate(messages):
         try:
@@ -300,13 +301,18 @@ def send_bulk_messages(self, messages: list) -> list[dict[str, Any]]:
                 message_id=message_data.get('message_id'),
                 message_thread_id=message_data.get('message_thread_id')
             )
-            results.append(result.get())
+
+            task_result = result.get()
+            if isinstance(task_result, dict):
+                results.append(TaskResponse(**task_result))
+            else:
+                results.append(task_result)
 
             if i < len(messages) - 1:
                 time.sleep(1)
 
         except Exception as e:
             logger.error('Error in bulk send for message %d: %s\n%s', i, str(e), traceback.format_exc())
-            results.append({'status': 'error', 'message': str(e)})
+            results.append(TaskResponse(status='error', message=str(e)))
 
     return results
