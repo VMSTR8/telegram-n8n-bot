@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel
 
 
@@ -26,10 +24,10 @@ class SurveyResponseSchema(BaseModel):
 
     Attributes:
         google_form_id (str): The Google Form ID associated with the survey.
-        answers (List[SurveyAnswerSchema]): List of answers provided in the survey.
+        answers (list[SurveyAnswerSchema]): A list of answers provided in the survey.
     """
     google_form_id: str
-    answers: List[SurveyAnswerSchema]
+    answers: list[SurveyAnswerSchema]
 
     class Config:
         json_schema_extra = {
