@@ -1,16 +1,17 @@
-from .user import UserRole, UserSchema
-from .chat import ChatSchema
-from .survey import SurveySchema
-from .penalty import PenaltySchema
-from .survey_response import SurveyResponseSchema
-from .new_form import NewFormSchema
+from .new_form_schemas import NewFormSchema
+from .survey_response_schemas import SurveyResponseSchema
+from .survey_schemas import (
+    UserInfo,
+    UserPenaltyInfo,
+    TelegramMessage,
+    WebhookResponse,
+)
 
 __all__ = [
-    'UserRole',
-    'UserSchema',
-    'ChatSchema',
-    'SurveySchema',
-    'PenaltySchema',
     'SurveyResponseSchema',
     'NewFormSchema',
+    'UserInfo',
+    'UserPenaltyInfo',
+    'TelegramMessage',
+    'WebhookResponse',
 ]
