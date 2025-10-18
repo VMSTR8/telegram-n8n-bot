@@ -1,10 +1,12 @@
 import json
+import logging
 from datetime import datetime
 from types import SimpleNamespace
 
 import aiohttp
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.filters import Command
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.types import Message
 
 from app.decorators import AuthDecorators as Auth
@@ -20,6 +22,8 @@ from app.services import (
     SurveyTemplateService
 )
 from config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AdminHandlers:
@@ -87,6 +91,9 @@ class AdminHandlers:
         self.router.message(Command('unbind_chat'))(self.unbind_chat_command)
         self.router.message(Command('add_admin'))(self.add_admin_command)
         self.router.message(Command('remove_admin'))(self.remove_admin_command)
+
+        # Callback for unbind chat confirmation
+        self.router.callback_query(F.data.startswith('unbind_chat:'))(self.unbind_chat_callback)
 
     @Auth.required_admin
     async def reserve_command(self, message: Message) -> None:
@@ -264,10 +271,9 @@ class AdminHandlers:
             )
 
     @Auth.required_creator
-    @Auth.required_not_private_chat
     async def unbind_chat_command(self, message: Message) -> None:
         """
-        Command handler for /unbind_chat. Unbinds the current chat from the database.
+        Command handler for /unbind_chat. Initiates the unbinding process for the current chat.
 
         Args:
             message (Message): Incoming message from the user.
@@ -275,21 +281,76 @@ class AdminHandlers:
         Returns:
             None
         """
-        is_unbound: bool = await self.chat_service.unbind_chat(telegram_id=message.chat.id)
+        chat_exists: Chat | None = await self.chat_service.get_bound_chat()
 
-        if is_unbound:
+        if not chat_exists:
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
-                text='✅ Чат успешно отвязан от базы данных.',
+                text='❌ Операция не выполнена, нет привязанного чата в базе данных.',
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
-        else:
-            await self.message_queue_service.send_message(
-                chat_id=message.chat.id,
-                text='❌ Не удалось отвязать чат.\nВозможно, он уже был отвязан ранее.',
-                parse_mode='Markdown',
-                message_id=message.message_id
+            return
+
+        chat_title: str = message.chat.title or 'Без названия'
+        user_id: int = message.from_user.id
+
+        keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text='Да, подтверждаю',
+                    callback_data=f'unbind_chat:{user_id}:confirm',
+                ),
+                InlineKeyboardButton(
+                    text='Нет, отмена',
+                    callback_data=f'unbind_chat:{user_id}:cancel'
+                )
+            ]
+        ])
+
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
+            text=(
+                f'⚠️ Вы уверены, что хотите отвязать чат *{chat_title}*?\n\n'
+                f'Учтите, что после этой операции все пользователи, которые '
+                f'зарегистрированы в боте будут удалены.'
+            ),
+            parse_mode='Markdown',
+            reply_markup=keyboard
+        )
+
+        await message.delete()
+
+    async def unbind_chat_callback(self, callback: CallbackQuery) -> None:
+        """
+        Callback handler for unbind chat confirmation.
+        
+        Args:
+            callback (CallbackQuery): Incoming callback query from the user.
+
+        Returns:
+            None
+        """
+        data_parts: list[str] = callback.data.split(':')
+
+        if len(data_parts) != 3:
+            return
+
+        _, user_id_str, action = data_parts
+        user_id_int: int = int(user_id_str)
+
+        if callback.from_user.id != user_id_int:
+            await callback.answer('❌ Эта кнопка не для вас.', show_alert=True)
+            return
+
+        if action == 'cancel':
+            await callback.message.delete()
+
+        elif action == 'confirm':
+            await self.chat_service.unbind_chat()
+            await self.user_service.delete_all_users_exclude_creators()
+            await callback.message.edit_text(
+                '✅ Чат успешно отвязан, все пользователи удалены.'
             )
 
     @Auth.required_admin
