@@ -4,6 +4,8 @@ from typing import Any
 
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
+from aiogram.exceptions import TelegramNetworkError
+
 from fastapi import APIRouter, Request, HTTPException, Depends
 
 from app.api_fastapi.dependencies import (
@@ -42,7 +44,10 @@ async def telegram_webhook(
         update = Update(**update_data)
         await dispatcher.feed_update(bot, update)
         return {'status': 'ok'}
-
+    
+    except TelegramNetworkError as tne:
+        logger.error('Telegram network error: %s', str(tne))
+    
     except Exception as e:
         logger.error('Error processing Telegram update: %s\n%s', str(e), traceback.format_exc())
         raise HTTPException(status_code=500, detail='Internal Server Error while processing Telegram update.') from e
