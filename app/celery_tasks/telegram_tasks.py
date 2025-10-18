@@ -8,7 +8,7 @@ from typing import AsyncGenerator
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter, TelegramAPIError
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardMarkup
 from aiohttp import ClientConnectionError, ClientError
 from celery.result import AsyncResult
 
@@ -74,21 +74,23 @@ def send_telegram_message(
         chat_id: int,
         text: str,
         parse_mode: str = 'HTML',
-        disable_web_page_preview: bool = False,
-        message_id: int = None,
-        message_thread_id: int = None
+        message_id: int | None = None,
+        message_thread_id: int | None = None,
+        reply_markup: dict | None = None,
+        disable_web_page_preview: bool = False
 ) -> TaskResponse | None:
     """
     Send a message to Telegram via Celery.
     
     Args:
-        self: The task instance.
-        chat_id: Chat ID
-        text: Message text
-        parse_mode: Parse mode (HTML, Markdown)
-        disable_web_page_preview: Disable web page preview
-        message_id: If provided, reply to this message ID
-        message_thread_id: Thread ID for topics
+        self: The task instance
+        chat_id (int): Chat ID
+        text (str): Message text
+        parse_mode (str): Parse mode (HTML, Markdown)
+        message_id (int | None): If provided, reply to this message ID
+        message_thread_id (int | None): Thread ID for topics
+        reply_markup (dict | None): Reply markup as a dictionary
+        disable_web_page_preview (bool): Disable web page preview
 
     Raises:
         self.retry: Retries the task in case of rate limiting or network errors.
@@ -98,14 +100,20 @@ def send_telegram_message(
     """
 
     async def _send_message():
+        reply_markup_obj: InlineKeyboardMarkup | None = None
+
+        if reply_markup:
+            reply_markup_obj = InlineKeyboardMarkup.model_validate(reply_markup)
+
         async with _bot_context() as bot:
             send_result: Message = await bot.send_message(
                 chat_id=chat_id,
-                message_thread_id=message_thread_id,
                 text=text,
                 parse_mode=parse_mode,
-                disable_web_page_preview=disable_web_page_preview,
-                reply_to_message_id=message_id
+                reply_to_message_id=message_id,
+                message_thread_id=message_thread_id,
+                reply_markup=reply_markup_obj,
+                disable_web_page_preview=disable_web_page_preview
             )
 
             return send_result
@@ -148,23 +156,23 @@ def send_and_pin_telegram_message(
         chat_id: int,
         text: str,
         parse_mode: str = 'HTML',
-        disable_web_page_preview: bool = False,
         message_id: int = None,
         message_thread_id: int = None,
+        disable_web_page_preview: bool = False,
         disable_pin_notification: bool = False
 ) -> TaskResponse | None:
     """
     Send a message to Telegram and pin it via Celery.
 
     Args:
-        self: The task instance.
-        chat_id: Chat ID
-        text: Message text
-        parse_mode: Parse mode (HTML, Markdown)
-        disable_web_page_preview: Disable web page preview
-        message_id: If provided, reply to this message ID
-        message_thread_id: Thread ID for topics
-        disable_pin_notification: If True, pin without notification
+        self: The task instance
+        chat_id (int): Chat ID
+        text (str): Message text
+        parse_mode (str): Parse mode (HTML, Markdown)
+        message_id (int | None): If provided, reply to this message ID
+        message_thread_id (int | None): Thread ID for topics
+        disable_web_page_preview (bool): Disable web page preview
+        disable_pin_notification (bool): Disable notification for pinning the message
     
     Raises:
         self.retry: Retries the task in case of rate limiting or network errors.
@@ -218,7 +226,9 @@ def send_and_pin_telegram_message(
             return _handle_network_error(self, chat_id, ClientConnectionError(error_message))
 
     except Exception as e:
-        logger.error('Unexpected error sending message to chat %s: %s\n%s', chat_id, str(e), traceback.format_exc())
+        logger.error(
+            'Unexpected error sending message to chat %s: %s\n%s', chat_id, str(e), traceback.format_exc()
+        )
         return TaskResponse(status='error', message=str(e))
 
 
@@ -267,7 +277,9 @@ def ban_user_from_chat(self, chat_id: int, user_id: int) -> TaskResponse | None:
             return _handle_network_error(self, chat_id, ClientConnectionError(error_message))
 
     except Exception as e:
-        logger.error('Error banning user %s from chat %s: %s\n%s', user_id, chat_id, str(e), traceback.format_exc())
+        logger.error(
+            'Error banning user %s from chat %s: %s\n%s', user_id, chat_id, str(e), traceback.format_exc()
+        )
         return TaskResponse(status='error', message=str(e))
 
 
@@ -297,9 +309,9 @@ def send_bulk_messages(self, messages: list) -> list[TaskResponse]:
                 chat_id=message_data['chat_id'],
                 text=message_data['text'],
                 parse_mode=message_data.get('parse_mode', 'HTML'),
-                disable_web_page_preview=message_data.get('disable_web_page_preview', False),
                 message_id=message_data.get('message_id'),
-                message_thread_id=message_data.get('message_thread_id')
+                message_thread_id=message_data.get('message_thread_id'),
+                disable_web_page_preview=message_data.get('disable_web_page_preview', False)
             )
 
             task_result = result.get()
