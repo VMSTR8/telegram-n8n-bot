@@ -7,9 +7,9 @@ from aiogram import Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
-from app.models import User, Survey
 from app.decorators import AuthDecorators as Auth
 from app.decorators import CallsignDecorators as Callsign
+from app.models import User, Survey
 from app.services import UserService, ChatService, SurveyService, MessageQueueService
 from config.settings import settings
 
@@ -111,7 +111,7 @@ class UserHandlers:
             '🔧 Администратор:\n'
             '• `/reserve позывной` - Повесить или снять бронь на прохождение опросов '
             'для конкретного пользователя\n'
-            '• `/create_survey название дата_окончания` - Создать опрос\n'
+            '• `/create_survey название + YYYY-MM-DD HH:MM` - Создать опрос\n'
             '• `/bind_chat` - Привязать чат к боту\n'
             '• `/bind_thread` - Назначить топик для оповещений по опросам\n'
             '• `/unbind_thread` - Отвязать топик для оповещений по опросам\n'
