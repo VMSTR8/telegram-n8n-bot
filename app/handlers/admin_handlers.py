@@ -1,7 +1,6 @@
 import json
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Any
 
 import aiohttp
 from aiogram import Router
@@ -11,6 +10,7 @@ from aiogram.types import Message
 from app.decorators import AuthDecorators as Auth
 from app.decorators import SurveyCreationDecorators as CreateSurvey
 from app.models import UserRole, User, Chat, SurveyTemplate
+from app.schemas import SurveyData
 from app.services import (
     UserService,
     ChatService,
@@ -177,7 +177,7 @@ class AdminHandlers:
         survey_json: str = survey_json.replace('{{title}}', title)
         survey_json: str = survey_json.replace('{{ended_at}}', ended_at.strftime('%Y-%m-%d %H:%M:%S'))
 
-        survey_data: dict[str, Any] = json.loads(survey_json)
+        survey_data: SurveyData = SurveyData(**json.loads(survey_json))
 
         headers: dict[str, str] = {
             'Content-Type': 'application/json',
@@ -188,7 +188,7 @@ class AdminHandlers:
             try:
                 async with session.post(
                         f'{self.n8n.url}/webhook/create-google-form',
-                        json=survey_data,
+                        json=survey_data.model_dump(),
                         headers=headers,
                 ) as response:
                     if response.status == 200:
