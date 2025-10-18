@@ -1,6 +1,7 @@
 import logging
 import traceback
 
+from aiogram.types import InlineKeyboardMarkup
 from celery.result import AsyncResult
 
 from app.celery_app import celery_app
@@ -30,9 +31,10 @@ class MessageQueueService:
             chat_id: int,
             text: str,
             parse_mode: str = 'HTML',
-            disable_web_page_preview: bool = False,
-            message_id: int = None,
-            message_thread_id: int = None
+            message_id: int | None = None,
+            message_thread_id: int | None = None,
+            reply_markup: InlineKeyboardMarkup | None = None,
+            disable_web_page_preview: bool = False
     ) -> QueueResult:
         """
         Add message to queue for sending.
@@ -41,22 +43,26 @@ class MessageQueueService:
             chat_id (int): Chat ID
             text (str): Message text
             parse_mode (str): Parse mode
+            message_id (int | None): If provided, reply to this message ID
+            message_thread_id (int | None): Thread ID
+            reply_markup (InlineKeyboardMarkup | None): Reply markup
             disable_web_page_preview (bool): Disable web page preview
-            message_id (int, optional): If provided, reply to this message ID
-            message_thread_id (int, optional): Thread ID
         
         Returns:
             dict: Result of adding to queue
         """
         try:
+            reply_markup_dict = reply_markup.model_dump() if reply_markup else None
+
             # Add task to Celery queue
             task: AsyncResult = celery_send_telegram_message.delay(
                 chat_id=chat_id,
-                message_thread_id=message_thread_id,
                 text=text,
                 parse_mode=parse_mode,
+                message_id=message_id,
+                message_thread_id=message_thread_id,
+                reply_markup=reply_markup_dict,
                 disable_web_page_preview=disable_web_page_preview,
-                message_id=message_id
             )
 
             logger.info('Message queued for chat %s, task ID: %s', chat_id, task.id)
@@ -93,8 +99,8 @@ class MessageQueueService:
             text (str): Message text
             parse_mode (str): Parse mode
             disable_web_page_preview (bool): Disable web page preview
-            message_id (int, optional): If provided, reply to this message ID
-            message_thread_id (int, optional): Thread ID
+            message_id (int | None): If provided, reply to this message ID
+            message_thread_id (int | None): Thread ID
             disable_pin_notification (bool): Disable pin notification
         
         Returns:
