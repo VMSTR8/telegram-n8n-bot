@@ -129,6 +129,8 @@ class UserHandlers:
             message_id=message.message_id
         )
 
+    @Auth.required_not_private_chat
+    @Auth.required_chat_bind
     @Callsign.validate_callsign_create
     async def register_command(self, message: Message, callsign: str) -> None:
         """
@@ -205,7 +207,7 @@ class UserHandlers:
             None
         """
         try:
-            data: dict[str, str | None] = {}
+            data: dict[str, str | datetime | None] = {}
 
             user: User = await self.user_service.get_user_by_telegram_id(message.from_user.id)
 
