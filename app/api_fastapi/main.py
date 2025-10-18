@@ -3,9 +3,8 @@ import traceback
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
-
 from aiogram import Bot
+from fastapi import FastAPI
 
 from app.api_fastapi.routers import telegram_webhook_router, n8n_webhook_router
 from app.bot_telegram import (
@@ -48,13 +47,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         bot_manager: BotManager = BotManager()
         await bot_manager.ensure_creator_exists()
         logger.info('Bot manager initialized and creator verified.')
-        
+
         bot: Bot = bot_manager.create_bot()
-        
+
         webhook_url: str = f'{settings.telegram.webhook_url}/webhook'
         await bot.set_webhook(
             url=webhook_url,
-            secret_token=settings.telegram.webhook_secret
+            secret_token=settings.telegram.webhook_secret,
+            allowed_updates=['message', 'edited_message', 'callback_query']
         )
         logger.info('Webhook set successfully at URL: %s', webhook_url)
 
@@ -68,8 +68,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 await bot_manager.bot.delete_webhook(drop_pending_updates=True)
                 await bot_manager.bot.session.close()
                 logger.info('Cleaned up bot resources after failure.')
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error('Failed to clean up bot resources: %s\n%s', str(e), traceback.format_exc())
         raise
 
     yield
@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info('Shutting down FastAPI application...')
     try:
         bot_manager: BotManager = getattr(app.state, 'bot_manager', None)
-        
+
         if bot_manager and bot_manager.bot:
             await bot_manager.bot.delete_webhook(drop_pending_updates=True)
             await bot_manager.bot.session.close()
