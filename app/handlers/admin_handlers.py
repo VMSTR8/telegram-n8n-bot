@@ -1,5 +1,4 @@
 import json
-import logging
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -22,8 +21,6 @@ from app.services import (
     SurveyTemplateService
 )
 from config.settings import settings
-
-logger = logging.getLogger(__name__)
 
 
 class AdminHandlers:
