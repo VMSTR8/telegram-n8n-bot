@@ -1,6 +1,5 @@
 import logging
 import traceback
-from typing import Any
 
 from fastapi import APIRouter, HTTPException, Header, Depends, Request
 
@@ -11,7 +10,14 @@ from app.api_fastapi.dependencies import (
     get_penalty_service,
     get_message_queue_service,
 )
-from app.api_fastapi.schemas import NewFormSchema, SurveyResponseSchema
+from app.api_fastapi.schemas import (
+    NewFormSchema,
+    SurveyResponseSchema,
+    UserInfo,
+    UserPenaltyInfo,
+    TelegramMessage,
+    WebhookResponse
+)
 from app.celery_tasks import ban_user_from_chat, send_bulk_messages
 from app.decorators import FastAPIValidate
 from app.models import Chat, Survey, User
@@ -32,7 +38,7 @@ async def _prepare_not_answered_users_object(
         survey_service: SurveyService,
         user_service: UserService,
         survey_responses: SurveyResponseSchema
-) -> tuple[Survey, dict[str, dict[str, Any]]]:
+) -> tuple[Survey, dict[str, UserInfo]]:
     """
     Prepares the survey and a dictionary of users who did not answer the survey.
 
@@ -50,13 +56,6 @@ async def _prepare_not_answered_users_object(
         the values are dictionaries with user details (telegram_id, username, first_name, last_name).
         If all users have answered, returns an empty dictionary.
     """
-
-    # Why we don't need exception handling here?
-    # Because this function is called only if survey exists
-    # n8n sends survey_responses only if survey was created before
-    # otherwise n8n does not reach this route and does not send any data
-    # And yes, this function is called in try-except block
-
     try:
         survey: Survey = \
             await survey_service.get_survey_by_google_form_id(survey_responses.google_form_id)
@@ -68,22 +67,22 @@ async def _prepare_not_answered_users_object(
         users_without_reservation: list[User] = \
             await user_service.get_users_without_reservation_exclude_creators()
 
-        callsign_to_data: dict[str, dict[str, Any]] = {
-            user.callsign: {
-                'telegram_id': user.telegram_id,
-                'username': user.username,
-                'first_name': user.first_name,
-                'last_name': user.last_name
-            } for user in users_without_reservation
+        callsign_to_data: dict[str, UserInfo] = {
+            user.callsign: UserInfo(
+                telegram_id=user.telegram_id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name
+            ) for user in users_without_reservation
         }
 
-        not_answered_users: dict[str, dict[str, Any]] = {
+        not_answered_users: dict[str, UserInfo] = {
             callsign: data for callsign, data in callsign_to_data.items()
             if callsign.lower() not in answers_list
         }
 
         return survey, not_answered_users
-    
+
     except ValueError as ve:
         logger.error('Validation error in _prepare_not_answered_users_object: %s', str(ve))
         raise HTTPException(status_code=400, detail='Invalid survey responses data.') from ve
@@ -92,7 +91,7 @@ async def _prepare_not_answered_users_object(
         raise HTTPException(status_code=500, detail='Internal Server Error while preparing survey data.') from e
 
 
-@n8n_webhook_router.post(path='/webhook/new-form', response_model=dict[str, Any])
+@n8n_webhook_router.post(path='/webhook/new-form', response_model=WebhookResponse)
 @FastAPIValidate.validate_header_secret(
     header_name='X-N8N-Secret-Token',
     secret=settings.n8n.n8n_webhook_secret
@@ -106,7 +105,7 @@ async def new_form_webhook(
         ),
         chat_service: ChatService = Depends(get_chat_service),
         message_queue_service: MessageQueueService = Depends(get_message_queue_service)
-) -> dict[str, Any]:
+) -> WebhookResponse:
     """
     Endpoint to handle incoming new form webhook from n8n.
 
@@ -146,8 +145,8 @@ async def new_form_webhook(
             parse_mode='Markdown'
         )
 
-        return {'status': 'received', 'data': form_data.model_dump()}
-    
+        return WebhookResponse(success='received', data=form_data.model_dump())
+
     except HTTPException:
         raise
     except Exception as e:
@@ -157,7 +156,7 @@ async def new_form_webhook(
         ) from e
 
 
-@n8n_webhook_router.post(path='/webhook/send-survey-completion-status', response_model=dict[str, Any])
+@n8n_webhook_router.post(path='/webhook/send-survey-completion-status', response_model=WebhookResponse)
 @FastAPIValidate.validate_header_secret(
     header_name='X-N8N-Secret-Token',
     secret=settings.n8n.n8n_webhook_secret
@@ -172,7 +171,7 @@ async def survey_completion_status_webhook(
         chat_service: ChatService = Depends(get_chat_service),
         survey_service: SurveyService = Depends(get_survey_service),
         user_service: UserService = Depends(get_user_service),
-) -> dict[str, Any]:
+) -> WebhookResponse:
     """
     Endpoint to handle incoming survey completion status webhook from n8n.
 
@@ -196,7 +195,8 @@ async def survey_completion_status_webhook(
 
         if not bound_chat:
             logger.warning('No bound chat found to send the survey completion status.')
-            raise HTTPException(status_code=400, detail='No bound chat configured for sending survey completion status.')
+            raise HTTPException(status_code=400,
+                                detail='No bound chat configured for sending survey completion status.')
 
         survey, not_answered_users = await _prepare_not_answered_users_object(
             survey_service=survey_service,
@@ -206,14 +206,13 @@ async def survey_completion_status_webhook(
 
         if not_answered_users:
             not_answered_list: str = ', '.join(
-                f'@{data["username"]}'.replace('_', r'\_') if data.get('username')
+                f'@{data.username}'.replace('_', r'\_') if data.username
                 else callsign
                 for callsign, data in not_answered_users.items()
             )
 
-            escaped_title: str = survey.title.replace('_', r'\_')
             not_answered_text: str = (
-                f'⚠️ Опрос по мероприятию [{escaped_title}]({survey.form_url}) '
+                f'⚠️ Опрос по мероприятию [{survey.title}]({survey.form_url}) '
                 f'не прошли:\n{not_answered_list}'
             )
 
@@ -225,25 +224,25 @@ async def survey_completion_status_webhook(
                 f'🔗 [Перейти к опросу]({survey.form_url})'
             )
 
-            messages_to_send: list[dict[str, Any]] = [
-                {
-                    'chat_id': bound_chat.telegram_id,
-                    'message_thread_id': bound_thread_id,
-                    'text': not_answered_text,
-                    'disable_web_page_preview': True,
-                    'parse_mode': 'Markdown'
-                },
-                {
-                    'chat_id': bound_chat.telegram_id,
-                    'message_thread_id': bound_thread_id,
-                    'text': reminder_text,
-                    'parse_mode': 'Markdown'
-                }
+            messages_to_send: list[TelegramMessage] = [
+                TelegramMessage(
+                    chat_id=bound_chat.telegram_id,
+                    message_thread_id=bound_thread_id,
+                    text=not_answered_text,
+                    disable_web_page_preview=True,
+                    parse_mode='Markdown'
+                ),
+                TelegramMessage(
+                    chat_id=bound_chat.telegram_id,
+                    message_thread_id=bound_thread_id,
+                    text=reminder_text,
+                    parse_mode='Markdown'
+                )
             ]
 
-            send_bulk_messages.delay(messages_to_send)
+            send_bulk_messages.delay([msg.model_dump() for msg in messages_to_send])
 
-        return {'status': 'received', 'data': survey_responses}
+        return WebhookResponse(success='received', data=survey_responses.model_dump())
 
     except HTTPException:
         raise
@@ -254,7 +253,7 @@ async def survey_completion_status_webhook(
         ) from e
 
 
-@n8n_webhook_router.post(path='/webhook/send-survey-finished', response_model=dict[str, Any])
+@n8n_webhook_router.post(path='/webhook/send-survey-finished', response_model=WebhookResponse)
 @FastAPIValidate.validate_header_secret(
     header_name='X-N8N-Secret-Token',
     secret=settings.n8n.n8n_webhook_secret
@@ -271,7 +270,7 @@ async def send_survey_finished_webhook(
         user_service: UserService = Depends(get_user_service),
         penalty_service: PenaltyService = Depends(get_penalty_service),
         message_queue_service: MessageQueueService = Depends(get_message_queue_service)
-) -> dict[str, Any]:
+) -> WebhookResponse:
     """
     Endpoint to handle incoming survey finished webhook from n8n.
     Also handles penalizing users who did not complete the survey and banning users with 3 penalties.
@@ -318,13 +317,12 @@ async def send_survey_finished_webhook(
                         reason=f'Не прошёл опрос по мероприятию "{survey.title}"'
                     )
                 penalized_users_list.append(
-                    f'@{data["username"]}'.replace('_', r'\_') if data.get('username')
+                    f'@{data.username}'.replace('_', r'\_') if data.username
                     else callsign
                 )
 
-            escaped_title: str = survey.title.replace('_', r'\_')
             penalized_users_text: str = (
-                f'⚠️ Опрос по мероприятию [{escaped_title}]({survey.form_url}) завершен.\n\n'
+                f'⚠️ Опрос по мероприятию [{survey.title}]({survey.form_url}) завершен.\n\n'
                 f'Ниже перечислены пользователи, которые не прошли опрос вовремя '
                 f'и получили +1 штрафной балл\n\n(3 штрафных балла = исключение из команды):\n'
                 f'{', '.join(penalized_users_list)}'
@@ -349,16 +347,22 @@ async def send_survey_finished_webhook(
                 parse_mode='Markdown'
             )
 
-        users_with_three_penalties: list[dict[str, Any]] = \
+        users_with_three_penalties_raw: list[dict[str, str | int]] = \
             await penalty_service.get_all_users_with_three_penalties()
+
+        users_with_three_penalties: list[UserPenaltyInfo] = [
+            UserPenaltyInfo(**user_data)
+            for user_data in users_with_three_penalties_raw
+        ]
 
         if users_with_three_penalties:
             for user_data in users_with_three_penalties:
-                ban_user_from_chat.delay(bound_chat.telegram_id, user_data['telegram_id'])
+                ban_user_from_chat.delay(bound_chat.telegram_id, user_data.telegram_id)
+                await user_service.deactivate_user(user_data.telegram_id)
 
             callsigns: str = ', '.join(
-                f'@{user_data['username']}'.replace('_', r'\_')
-                if user_data.get('username') else user_data['callsign']
+                f'@{user_data.username}'.replace('_', r'\_')
+                if user_data.username else user_data.callsign
                 for user_data in users_with_three_penalties
             )
 
@@ -372,11 +376,11 @@ async def send_survey_finished_webhook(
                 parse_mode='Markdown'
             )
 
-        return {
-            'status': 'received',
-            'data': survey_responses,
-            'users_with_three_penalties': users_with_three_penalties
-        }
+        return WebhookResponse(
+            success='received',
+            data=survey_responses.model_dump(),
+            users_with_three_penalties=users_with_three_penalties
+        )
 
     except HTTPException:
         raise
