@@ -205,3 +205,13 @@ class UserService:
             list[User]: List of active users without reservations (excluding creators).
         """
         return await User.filter(reserved=False, active=True, role__not=UserRole.CREATOR).all()
+
+    @staticmethod
+    async def delete_all_users_exclude_creators() -> int:
+        """
+        Deletes all users except those with the CREATOR role.
+
+        Returns:
+            int: Number of deleted users.
+        """
+        return await User.filter(role__not=UserRole.CREATOR).delete()
