@@ -24,7 +24,7 @@ async def telegram_webhook(
         request: Request,
         bot: Bot = Depends(get_bot),
         dispatcher: Dispatcher = Depends(get_dispatcher),
-) -> dict[str, str]:
+) -> dict[str, str] | None:
     """
     Endpoint to handle incoming Telegram webhook updates.
 
