@@ -16,9 +16,9 @@ class DatabaseSettings(BaseSettings):
     """Settings for the database connection"""
     host: str = Field(default='localhost', description='Database host')
     port: int = Field(default=5432, description='Database port')
-    user: str = Field(default='postgres', description='Database user')
-    password: str = Field(default='password', description='Database password')
-    basename: str = Field(default='telegramBot', description='Database name')
+    user: str = Field(default='telegram_n8n_db', description='Database user')
+    password: str = Field(default='reallyhardpassword0432', description='Database password')
+    basename: str = Field(default='telegram_n8n_db', description='Database name')
 
     @property
     def url(self) -> str:
