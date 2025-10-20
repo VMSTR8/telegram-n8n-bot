@@ -6,7 +6,7 @@ class Chat(Model):
     """
     Model representing a Telegram chat.
     """
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     telegram_id = fields.BigIntField(unique=True, description='Telegram ID чата')
     title = fields.CharField(max_length=255, null=True, description='Chat title, if any')
     chat_type = fields.CharField(max_length=50, description='Chat type (private, group, supergroup, channel)')
