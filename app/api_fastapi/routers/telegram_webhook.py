@@ -47,6 +47,7 @@ async def telegram_webhook(
     
     except TelegramNetworkError as tne:
         logger.error('Telegram network error: %s', str(tne))
+        raise HTTPException(status_code=503, detail='Service Unavailable due to Telegram network issues.') from tne
     
     except Exception as e:
         logger.error('Error processing Telegram update: %s\n%s', str(e), traceback.format_exc())
