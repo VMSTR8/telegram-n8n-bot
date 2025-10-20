@@ -2,3 +2,22 @@
 tortoise_orm = "config.TORTOISE_ORM"
 location = "./migrations"
 src_folder = "./."
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--asyncio-mode=auto",
+    "--tb=short",
+    "-v",
+]
+markers = [
+    "asyncio: marks tests as async (using pytest-asyncio)",
+    "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests",
+    "e2e: marks tests as end-to-end tests",
+]
+pythonpath = ["."]
