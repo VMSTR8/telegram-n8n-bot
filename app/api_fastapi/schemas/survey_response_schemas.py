@@ -10,12 +10,13 @@ class SurveyAnswerSchema(BaseModel):
     """
     answer: str
 
-    class Config:
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "answer": "drinkins"
             }
         }
+    }
 
 
 class SurveyResponseSchema(BaseModel):
@@ -29,8 +30,8 @@ class SurveyResponseSchema(BaseModel):
     google_form_id: str
     answers: list[SurveyAnswerSchema]
 
-    class Config:
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "google_form_id": "1FAIpQLSfD2...",
                 "answers": [
@@ -40,3 +41,4 @@ class SurveyResponseSchema(BaseModel):
                 ]
             }
         }
+    }
