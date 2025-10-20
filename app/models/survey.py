@@ -6,7 +6,7 @@ class Survey(Model):
     """
     Model representing a Google Forms survey.
     """
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     google_form_id = fields.CharField(max_length=255, unique=True, description='Google Form ID')
     title = fields.CharField(max_length=255, description='Survey title')
     form_url = fields.CharField(max_length=512, description='Google Form URL')
