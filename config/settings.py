@@ -1,7 +1,7 @@
-from token import OP
 from zoneinfo import ZoneInfo
+
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class TelegramBotSettings(BaseSettings):
@@ -23,7 +23,7 @@ class DatabaseSettings(BaseSettings):
     @property
     def url(self) -> str:
         return f'postgres://{self.user}:{self.password}@{self.host}:{self.port}/{self.basename}'
-    
+
 
 class RabbitMQSettings(BaseSettings):
     """Settings for RabbitMQ connection"""
@@ -63,11 +63,12 @@ class AppSettings(BaseSettings):
         """
         return ZoneInfo(self.timezone)
 
-    class Config:
-        env_file = '.env'
-        env_file_encoding = 'utf-8'
-        extra = 'ignore'
-        env_nested_delimiter = '__'
+    model_config = SettingsConfigDict(
+        env_file='.env',
+        env_file_encoding='utf-8',
+        extra='ignore',
+        env_nested_delimiter='__'
+    )
 
 
 settings = AppSettings()
