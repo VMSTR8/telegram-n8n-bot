@@ -20,7 +20,7 @@ class User(Model):
     """
     Model representing a Telegram bot user.
     """
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     telegram_id = fields.BigIntField(unique=True, description='Telegram ID of the user')
 
     username = fields.CharField(max_length=255, null=True, description='Username in Telegram')
