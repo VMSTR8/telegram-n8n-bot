@@ -6,7 +6,7 @@ class Penalty(Model):
     """
     Model representing a penalty point assigned to a user for not participating in surveys.
     """
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     user = fields.ForeignKeyField(
         'models.User',
         related_name='penalties',
