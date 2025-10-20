@@ -289,7 +289,6 @@ class AdminHandlers:
             )
             return
 
-        chat_title: str = message.chat.title or 'Без названия'
         user_id: int = message.from_user.id
 
         keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
@@ -308,7 +307,7 @@ class AdminHandlers:
         await self.message_queue_service.send_message(
             chat_id=message.chat.id,
             text=(
-                f'⚠️ Вы уверены, что хотите отвязать чат *{chat_title}*?\n\n'
+                f'⚠️ Вы уверены, что хотите отвязать чат *{chat_exists.title}*?\n\n'
                 f'Учтите, что после этой операции все пользователи, которые '
                 f'зарегистрированы в боте будут удалены.'
             ),
