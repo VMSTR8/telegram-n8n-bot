@@ -60,9 +60,9 @@ async def _prepare_not_answered_users_object(
         survey: Survey = \
             await survey_service.get_survey_by_google_form_id(survey_responses.google_form_id)
 
-        answers_list: list[str] = [
+        answers_set: set[str] = {
             answer.answer.lower() for answer in survey_responses.answers
-        ]
+        }
 
         users_without_reservation: list[User] = \
             await user_service.get_users_without_reservation_exclude_creators()
@@ -78,7 +78,7 @@ async def _prepare_not_answered_users_object(
 
         not_answered_users: dict[str, UserInfo] = {
             callsign: data for callsign, data in callsign_to_data.items()
-            if callsign.lower() not in answers_list
+            if callsign.lower() not in answers_set
         }
 
         return survey, not_answered_users
@@ -388,10 +388,10 @@ async def send_survey_finished_webhook(
                         survey_id=survey.id,
                         reason=f'Не прошёл опрос по мероприятию "{survey.title}"'
                     )
-                penalized_users_list.append(
-                    f'@{data.username}'.replace('_', r'\_') if data.username
-                    else callsign
-                )
+                    penalized_users_list.append(
+                        f'@{data.username}'.replace('_', r'\_') if data.username
+                        else callsign
+                    )
 
             base_penalized_users_text: str = (
                 f'⚠️ Опрос по мероприятию [{survey.title}]({survey.form_url}) завершен.\n\n'
