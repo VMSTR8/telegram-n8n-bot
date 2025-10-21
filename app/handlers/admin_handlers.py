@@ -1,9 +1,11 @@
 import json
+import logging
 from datetime import datetime
 from types import SimpleNamespace
 
 import aiohttp
 from aiogram import Router, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.types import Message
@@ -21,6 +23,8 @@ from app.services import (
     SurveyTemplateService
 )
 from config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AdminHandlers:
@@ -314,8 +318,15 @@ class AdminHandlers:
             parse_mode='Markdown',
             reply_markup=keyboard
         )
-
-        await message.delete()
+        try:
+            await message.delete()
+        except TelegramBadRequest as tbr:
+            if 'message to delete not found' in str(tbr).lower():
+                logger.warning(
+                    'Message already deleted or not found: %s', str(tbr)
+                )
+            else:
+                raise
 
     async def unbind_chat_callback(self, callback: CallbackQuery) -> None:
         """
