@@ -1,7 +1,7 @@
 import logging
 import traceback
 
-from fastapi import APIRouter, HTTPException, Header, Depends, Request
+from fastapi import APIRouter, HTTPException, Header, Depends, Request, status
 
 from app.api_fastapi.dependencies import (
     get_chat_service,
@@ -85,10 +85,68 @@ async def _prepare_not_answered_users_object(
 
     except ValueError as ve:
         logger.error('Validation error in _prepare_not_answered_users_object: %s', str(ve))
-        raise HTTPException(status_code=400, detail='Invalid survey responses data.') from ve
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail='Invalid survey responses data.') from ve
     except Exception as e:
         logger.error('Unexpected error in _prepare_not_answered_users_object: %s\n%s', str(e), traceback.format_exc())
-        raise HTTPException(status_code=500, detail='Internal Server Error while preparing survey data.') from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail='Internal Server Error while preparing survey data.') from e
+
+
+def _split_users_into_chunks(
+        base_text: str,
+        users_list: list[str],
+        max_length: int = 4096
+) -> list[str]:
+    """
+    Splits users list into multiple message chunks if combined with base_text exceeds max_length.
+    Each chunk contains base_text + portion of users.
+    
+    Args:
+        base_text: The base message text (e.g., "⚠️ Опрос не прошли:\n").
+        users_list: List of username strings (e.g., ['@username1', '@username2']).
+        max_length: Maximum length of each message (default: 4096).
+    
+    Returns:
+        List of message strings. First message has base_text + users,
+        subsequent messages have only users.
+    """
+    if not users_list:
+        return [base_text]
+
+    if len(base_text) > max_length:
+        raise ValueError('Base text alone exceeds maximum message length')
+
+    messages: list[str] = []
+    current_chunk: list[str] = []
+    current_length: int = len(base_text)
+    is_first_message: bool = True
+
+    for user in users_list:
+        separator: str = ', ' if current_chunk else ''
+        users_with_separator_length: int = len(separator) + len(user)
+
+        if current_length + users_with_separator_length > max_length:
+            if current_chunk:
+                if is_first_message:
+                    messages.append(base_text + ', '.join(current_chunk))
+                    is_first_message = False
+                else:
+                    messages.append(', '.join(current_chunk))
+
+            current_chunk: list[str] = [user]
+            current_length: int = len(user)
+        else:
+            current_chunk.append(user)
+            current_length += users_with_separator_length
+
+    if current_chunk:
+        if is_first_message:
+            messages.append(base_text + ', '.join(current_chunk))
+        else:
+            messages.append(', '.join(current_chunk))
+
+    return messages
 
 
 @n8n_webhook_router.post(path='/webhook/new-form', response_model=WebhookResponse)
@@ -128,7 +186,8 @@ async def new_form_webhook(
 
         if not bound_chat:
             logger.warning('No bound chat found to send the form data.')
-            raise HTTPException(status_code=400, detail='No bound chat configured for sending form notifications.')
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail='No bound chat configured for sending form notifications.')
 
         new_form_text: str = (
             f'Запущен новый опрос:\n\n'
@@ -151,9 +210,8 @@ async def new_form_webhook(
         raise
     except Exception as e:
         logger.error('Error processing new form webhook: %s\n%s', str(e), traceback.format_exc())
-        raise HTTPException(
-            status_code=500, detail='Internal Server Error while processing new form.'
-        ) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail='Internal Server Error while processing new form.') from e
 
 
 @n8n_webhook_router.post(path='/webhook/send-survey-completion-status', response_model=WebhookResponse)
@@ -195,7 +253,7 @@ async def survey_completion_status_webhook(
 
         if not bound_chat:
             logger.warning('No bound chat found to send the survey completion status.')
-            raise HTTPException(status_code=400,
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                 detail='No bound chat configured for sending survey completion status.')
 
         survey, not_answered_users = await _prepare_not_answered_users_object(
@@ -205,15 +263,21 @@ async def survey_completion_status_webhook(
         )
 
         if not_answered_users:
-            not_answered_list: str = ', '.join(
+            not_answered_list_items: list[str] = [
                 f'@{data.username}'.replace('_', r'\_') if data.username
                 else callsign
                 for callsign, data in not_answered_users.items()
+            ]
+
+            base_not_answered_text: str = (
+                f'⚠️ Опрос по мероприятию [{survey.title}]({survey.form_url}) '
+                f'не прошли:\n'
             )
 
-            not_answered_text: str = (
-                f'⚠️ Опрос по мероприятию [{survey.title}]({survey.form_url}) '
-                f'не прошли:\n{not_answered_list}'
+            not_answered_messages: list[str] = _split_users_into_chunks(
+                base_text=base_not_answered_text,
+                users_list=not_answered_list_items,
+                max_length=4096
             )
 
             reminder_text: str = (
@@ -224,21 +288,27 @@ async def survey_completion_status_webhook(
                 f'🔗 [Перейти к опросу]({survey.form_url})'
             )
 
-            messages_to_send: list[TelegramMessage] = [
-                TelegramMessage(
-                    chat_id=bound_chat.telegram_id,
-                    message_thread_id=bound_thread_id,
-                    text=not_answered_text,
-                    disable_web_page_preview=True,
-                    parse_mode='Markdown'
-                ),
+            messages_to_send: list[TelegramMessage] = []
+
+            for msg_text in not_answered_messages:
+                messages_to_send.append(
+                    TelegramMessage(
+                        chat_id=bound_chat.telegram_id,
+                        message_thread_id=bound_thread_id,
+                        text=msg_text,
+                        disable_web_page_preview=True,
+                        parse_mode='Markdown'
+                    )
+                )
+
+            messages_to_send.append(
                 TelegramMessage(
                     chat_id=bound_chat.telegram_id,
                     message_thread_id=bound_thread_id,
                     text=reminder_text,
                     parse_mode='Markdown'
                 )
-            ]
+            )
 
             send_bulk_messages.delay([msg.model_dump() for msg in messages_to_send])
 
@@ -248,9 +318,8 @@ async def survey_completion_status_webhook(
         raise
     except Exception as e:
         logger.error('Error processing survey completion status: %s\n%s', str(e), traceback.format_exc())
-        raise HTTPException(
-            status_code=500, detail='Internal Server Error while processing survey completion status.'
-        ) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail='Internal Server Error while processing survey completion status.') from e
 
 
 @n8n_webhook_router.post(path='/webhook/send-survey-finished', response_model=WebhookResponse)
@@ -297,13 +366,16 @@ async def send_survey_finished_webhook(
 
         if not bound_chat:
             logger.warning('No bound chat found to send the survey finished message.')
-            raise HTTPException(status_code=400, detail='No bound chat configured for sending survey finished message.')
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail='No bound chat configured for sending survey finished message.')
 
         survey, not_answered_users = await _prepare_not_answered_users_object(
             survey_service=survey_service,
             user_service=user_service,
             survey_responses=survey_responses
         )
+
+        all_messages_to_send: list[TelegramMessage] = []
 
         if not_answered_users:
             penalized_users_list: list[str] = []
@@ -321,20 +393,28 @@ async def send_survey_finished_webhook(
                     else callsign
                 )
 
-            penalized_users_text: str = (
+            base_penalized_users_text: str = (
                 f'⚠️ Опрос по мероприятию [{survey.title}]({survey.form_url}) завершен.\n\n'
                 f'Ниже перечислены пользователи, которые не прошли опрос вовремя '
                 f'и получили +1 штрафной балл\n\n(3 штрафных балла = исключение из команды):\n'
-                f'{', '.join(penalized_users_list)}'
             )
 
-            await message_queue_service.send_message(
-                chat_id=bound_chat.telegram_id,
-                message_thread_id=bound_thread_id,
-                text=penalized_users_text,
-                disable_web_page_preview=True,
-                parse_mode='Markdown'
+            penalized_messages: list[str] = _split_users_into_chunks(
+                base_text=base_penalized_users_text,
+                users_list=penalized_users_list,
+                max_length=4096
             )
+
+            for msg_text in penalized_messages:
+                all_messages_to_send.append(
+                    TelegramMessage(
+                        chat_id=bound_chat.telegram_id,
+                        message_thread_id=bound_thread_id,
+                        text=msg_text,
+                        disable_web_page_preview=True,
+                        parse_mode='Markdown'
+                    )
+                )
 
         else:
             await message_queue_service.send_message(
@@ -360,21 +440,35 @@ async def send_survey_finished_webhook(
                 ban_user_from_chat.delay(bound_chat.telegram_id, user_data.telegram_id)
                 await user_service.deactivate_user(user_data.telegram_id)
 
-            callsigns: str = ', '.join(
+            banned_users_list: list[str] = [
                 f'@{user_data.username}'.replace('_', r'\_')
                 if user_data.username else user_data.callsign
                 for user_data in users_with_three_penalties
+            ]
+
+            base_banned_text: str = (
+                f'🚫 Пользователи, достигшие 3 штрафных баллов, '
+                f'были автоматически исключены из команды:\n'
             )
 
-            await message_queue_service.send_message(
-                chat_id=bound_chat.telegram_id,
-                message_thread_id=bound_thread_id,
-                text=(
-                    f'🚫 Пользователи, достигшие 3 штрафных баллов, были автоматически исключены из команды:\n'
-                    f'{callsigns}'
-                ),
-                parse_mode='Markdown'
+            banned_messages: list[str] = _split_users_into_chunks(
+                base_text=base_banned_text,
+                users_list=banned_users_list,
+                max_length=4096
             )
+
+            for msg_text in banned_messages:
+                all_messages_to_send.append(
+                    TelegramMessage(
+                        chat_id=bound_chat.telegram_id,
+                        message_thread_id=bound_thread_id,
+                        text=msg_text,
+                        parse_mode='Markdown'
+                    )
+                )
+
+        if all_messages_to_send:
+            send_bulk_messages.delay([msg.model_dump() for msg in all_messages_to_send])
 
         return WebhookResponse(
             success='received',
@@ -386,6 +480,5 @@ async def send_survey_finished_webhook(
         raise
     except Exception as e:
         logger.error('Error processing survey finished data: %s\n%s', str(e), traceback.format_exc())
-        raise HTTPException(
-            status_code=500, detail='Internal Server Error while processing survey finished data.'
-        ) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail='Internal Server Error while processing survey finished data.') from e
