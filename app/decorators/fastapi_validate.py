@@ -2,7 +2,7 @@ import logging
 from functools import wraps
 from typing import Callable, Awaitable, TypeVar
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, status
 
 from config import settings
 
@@ -22,7 +22,7 @@ class FastAPIValidate:
     def validate_header_secret(
             header_name: str = 'X-Telegram-Bot-Api-Secret-Token',
             secret: str | None = settings.telegram.webhook_secret,
-            error_status_code: int = 403,
+            error_status_code: int = status.HTTP_403_FORBIDDEN,
             error_detail: str = 'Forbidden'
     ) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
         """
