@@ -149,7 +149,7 @@ class UserHandlers:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
                     text=f'❌ Вы уже зарегистрированы в системе.\n\n'
-                         f'Важный позывной: *{user_exists.callsign.capitalize()}*',
+                         f'Ваш позывной: *{user_exists.callsign.capitalize()}*',
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
