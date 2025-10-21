@@ -54,7 +54,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await bot.set_webhook(
             url=webhook_url,
             secret_token=settings.telegram.webhook_secret,
-            allowed_updates=['message', 'edited_message', 'callback_query']
+            allowed_updates=[
+                'message', 'edited_message', 'callback_query', 'chat_member'
+            ]
         )
         logger.info('Webhook set successfully at URL: %s', webhook_url)
 
