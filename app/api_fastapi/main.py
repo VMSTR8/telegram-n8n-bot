@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             url=webhook_url,
             secret_token=settings.telegram.webhook_secret,
             allowed_updates=[
-                'message', 'edited_message', 'callback_query', 'chat_member'
+                'message', 'callback_query', 'chat_member'
             ]
         )
         logger.info('Webhook set successfully at URL: %s', webhook_url)
@@ -104,8 +104,8 @@ def create_app() -> FastAPI:
         title='Telegram Bot with n8n integration',
         description='A FastAPI application that integrates a Telegram bot with n8n workflow automation.',
         version='1.0.0',
-        docs_url='/docs',
-        redoc_url='/redoc',
+        docs_url=None,
+        redoc_url=None,
         redirect_slashes=False,
         lifespan=lifespan
     )
