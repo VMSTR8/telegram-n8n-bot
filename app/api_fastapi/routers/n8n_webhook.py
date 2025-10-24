@@ -1,7 +1,7 @@
 import logging
 import traceback
 
-from fastapi import APIRouter, HTTPException, Header, Depends, Request, status
+from fastapi import APIRouter, HTTPException, Header, Depends, status
 
 from app.api_fastapi.dependencies import (
     get_chat_service,
@@ -9,6 +9,7 @@ from app.api_fastapi.dependencies import (
     get_user_service,
     get_penalty_service,
     get_message_queue_service,
+    verify_n8n_webhook_secret
 )
 from app.api_fastapi.schemas import (
     NewFormSchema,
@@ -19,7 +20,6 @@ from app.api_fastapi.schemas import (
     WebhookResponse
 )
 from app.celery_tasks import ban_user_from_chat, send_bulk_messages
-from app.decorators import FastAPIValidate
 from app.models import Chat, Survey, User
 from app.services import (
     ChatService,
@@ -150,29 +150,25 @@ def _split_users_into_chunks(
 
 
 @n8n_webhook_router.post(path='/webhook/new-form', response_model=WebhookResponse)
-@FastAPIValidate.validate_header_secret(
-    header_name='X-N8N-Secret-Token',
-    secret=settings.n8n.n8n_webhook_secret
-)
 async def new_form_webhook(
-        request: Request,
         form_data: NewFormSchema,
-        x_n8n_secret_token: str = Header(
+        chat_service: ChatService = Depends(get_chat_service),
+        message_queue_service: MessageQueueService = Depends(get_message_queue_service),
+        _: str = Depends(verify_n8n_webhook_secret),
+        _x_n8n_secret_token: str = Header(
             default=None,
             alias='X-N8N-Secret-Token'
-        ),
-        chat_service: ChatService = Depends(get_chat_service),
-        message_queue_service: MessageQueueService = Depends(get_message_queue_service)
+        )
 ) -> WebhookResponse:
     """
     Endpoint to handle incoming new form webhook from n8n.
 
     Args:
-        request: Request - FastAPI request object containing the new form data. (Unused but kept for decorator consistency)
-        form_data: NewFormSchema - new form data.
-        x_n8n_secret_token: str - n8n secret token from header. (Unused but kept for testing via docs)
-        chat_service: ChatService - instance of ChatService.
-        message_queue_service: MessageQueueService - instance of MessageQueueService.
+        form_data (NewFormSchema): new form data.
+        chat_service (ChatService): instance of ChatService.
+        message_queue_service (MessageQueueService): instance of MessageQueueService.
+        _ (str): Verified webhook secret token.
+        _x_n8n_secret_token (str): n8n secret token from header.
 
     Raises:
         HTTPException: If no bound chat is found or if any other error occurs during processing.
@@ -215,31 +211,27 @@ async def new_form_webhook(
 
 
 @n8n_webhook_router.post(path='/webhook/send-survey-completion-status', response_model=WebhookResponse)
-@FastAPIValidate.validate_header_secret(
-    header_name='X-N8N-Secret-Token',
-    secret=settings.n8n.n8n_webhook_secret
-)
 async def survey_completion_status_webhook(
-        request: Request,
         survey_responses: SurveyResponseSchema,
-        x_n8n_secret_token: str = Header(
-            default=None,
-            alias='X-N8N-Secret-Token'
-        ),
         chat_service: ChatService = Depends(get_chat_service),
         survey_service: SurveyService = Depends(get_survey_service),
         user_service: UserService = Depends(get_user_service),
+        _: str = Depends(verify_n8n_webhook_secret),
+        _x_n8n_secret_token: str = Header(
+            default=None,
+            alias='X-N8N-Secret-Token'
+        )
 ) -> WebhookResponse:
     """
     Endpoint to handle incoming survey completion status webhook from n8n.
 
     Args:
-        request: Request - FastAPI request object containing the survey responses data. (Unused but kept for decorator consistency)
-        survey_responses: SurveyResponseSchema - survey responses data.
-        x_n8n_secret_token: str - n8n secret token from header. (Unused but kept for testing via docs)
-        chat_service: ChatService - instance of ChatService.
-        survey_service: SurveyService - instance of SurveyService.
-        user_service: UserService - instance of UserService.
+        survey_responses (SurveyResponseSchema): survey responses data.
+        chat_service (ChatService): instance of ChatService.
+        survey_service (SurveyService): instance of SurveyService.
+        user_service (UserService): instance of UserService.
+        _ (str): Verified webhook secret token.
+        _x_n8n_secret_token (str): n8n secret token from header.
 
     Raises:
         HTTPException: If no bound chat is found or if any other error occurs during processing.
@@ -323,36 +315,32 @@ async def survey_completion_status_webhook(
 
 
 @n8n_webhook_router.post(path='/webhook/send-survey-finished', response_model=WebhookResponse)
-@FastAPIValidate.validate_header_secret(
-    header_name='X-N8N-Secret-Token',
-    secret=settings.n8n.n8n_webhook_secret
-)
 async def send_survey_finished_webhook(
-        request: Request,
         survey_responses: SurveyResponseSchema,
-        x_n8n_secret_token: str = Header(
-            default=None,
-            alias='X-N8N-Secret-Token'
-        ),
         chat_service: ChatService = Depends(get_chat_service),
         survey_service: SurveyService = Depends(get_survey_service),
         user_service: UserService = Depends(get_user_service),
         penalty_service: PenaltyService = Depends(get_penalty_service),
-        message_queue_service: MessageQueueService = Depends(get_message_queue_service)
+        message_queue_service: MessageQueueService = Depends(get_message_queue_service),
+        _: str = Depends(verify_n8n_webhook_secret),
+        _x_n8n_secret_token: str = Header(
+            default=None,
+            alias='X-N8N-Secret-Token'
+        )
 ) -> WebhookResponse:
     """
     Endpoint to handle incoming survey finished webhook from n8n.
     Also handles penalizing users who did not complete the survey and banning users with 3 penalties.
 
     Args:
-        request: Request - FastAPI request object containing the survey responses data. (Unused but kept for decorator consistency)
-        survey_responses: SurveyResponseSchema - survey responses data.
-        x_n8n_secret_token: str - n8n secret token from header. (Unused but kept for testing via docs)
-        chat_service: ChatService - instance of ChatService.
-        survey_service: SurveyService - instance of SurveyService.
-        user_service: UserService - instance of UserService.
-        penalty_service: PenaltyService - instance of PenaltyService.
-        message_queue_service: MessageQueueService - instance of MessageQueueService.
+        survey_responses (SurveyResponseSchema): survey responses data.
+        chat_service (ChatService): instance of ChatService.
+        survey_service (SurveyService): instance of SurveyService.
+        user_service (UserService): instance of UserService.
+        penalty_service (PenaltyService): instance of PenaltyService.
+        message_queue_service (MessageQueueService): instance of MessageQueueService.
+        _ (str): Verified webhook secret token.
+        _x_n8n_secret_token (str): n8n secret token from header.
 
     Raises:
         HTTPException: If no bound chat is found or if any other error occurs during processing.
