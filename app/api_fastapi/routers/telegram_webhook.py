@@ -9,20 +9,20 @@ from fastapi import APIRouter, Request, HTTPException, Depends, status
 
 from app.api_fastapi.dependencies import (
     get_bot,
-    get_dispatcher
+    get_dispatcher,
+    verify_telegram_webhook_secret
 )
-from app.decorators import FastAPIValidate
 
 logger = logging.getLogger(__name__)
 telegram_webhook_router: APIRouter = APIRouter()
 
 
 @telegram_webhook_router.post(path='/webhook', response_model=dict[str, str])
-@FastAPIValidate.validate_header_secret()
 async def telegram_webhook(
         request: Request,
         bot: Bot = Depends(get_bot),
         dispatcher: Dispatcher = Depends(get_dispatcher),
+        _: str = Depends(verify_telegram_webhook_secret)
 ) -> dict[str, str]:
     """
     Endpoint to handle incoming Telegram webhook updates.
@@ -31,6 +31,7 @@ async def telegram_webhook(
         request (Request): FastAPI request object containing the update data.
         bot (Bot): Instance of the Telegram Bot.
         dispatcher (Dispatcher): Instance of the Dispatcher to process updates.
+        _ (str): Verified webhook secret token.
 
     Raises:
         HTTPException: If there is an error processing the update.
