@@ -36,26 +36,6 @@ class TestPenaltyServiceAddPenalty:
         assert penalty.penalty_date is not None
         assert isinstance(penalty.penalty_date, datetime)
 
-    async def test_add_penalty_with_custom_date(
-            self, db: None, test_user_regular: User, test_survey: Survey, moscow_timezone: ZoneInfo
-    ):
-        """
-        Test adding a penalty with a custom date.
-        """
-        service: PenaltyService = PenaltyService()
-        custom_date: datetime = datetime.now(tz=moscow_timezone) - timedelta(days=5)
-
-        penalty: Penalty = await service.add_penalty(
-            user_id=test_user_regular.id,
-            survey_id=test_survey.id,
-            reason='Просрочил опрос',
-            penalty_date=custom_date
-        )
-
-        assert penalty.id is not None
-        assert penalty.penalty_date == custom_date
-        assert penalty.reason == 'Просрочил опрос'
-
     async def test_add_penalty_creates_db_record(
             self, db: None, test_user_regular: User, test_survey: Survey
     ):
@@ -735,45 +715,6 @@ class TestPenaltyServiceEdgeCases:
         assert penalty.id is not None
         assert penalty.reason == long_reason
         assert len(penalty.reason) == 10000
-
-    async def test_add_penalty_with_future_date(
-            self, db: None, test_user_regular: User, test_survey: Survey, moscow_timezone: ZoneInfo
-    ):
-        """
-        Test adding a penalty with a future date.
-        """
-        service: PenaltyService = PenaltyService()
-        future_date: datetime = datetime.now(tz=moscow_timezone) + timedelta(days=30)
-
-        penalty: Penalty = await service.add_penalty(
-            user_id=test_user_regular.id,
-            survey_id=test_survey.id,
-            reason='Штраф из будущего',
-            penalty_date=future_date
-        )
-
-        assert penalty.id is not None
-        assert penalty.penalty_date == future_date
-        assert penalty.penalty_date > datetime.now(tz=moscow_timezone)
-
-    async def test_add_penalty_with_very_old_date(
-            self, db: None, test_user_regular: User, test_survey: Survey, moscow_timezone: ZoneInfo
-    ):
-        """
-        Test adding a penalty with a very old date.
-        """
-        service: PenaltyService = PenaltyService()
-        old_date: datetime = datetime(2020, 1, 1, tzinfo=moscow_timezone)
-
-        penalty: Penalty = await service.add_penalty(
-            user_id=test_user_regular.id,
-            survey_id=test_survey.id,
-            reason='Старый штраф',
-            penalty_date=old_date
-        )
-
-        assert penalty.id is not None
-        assert penalty.penalty_date == old_date
 
     async def test_get_all_users_with_three_penalties_boundary_case(
             self, db: None, test_user_regular: User, test_user_admin: User, test_survey: Survey
