@@ -29,7 +29,7 @@ class AuthDecorators:
         self.message_queue_service: MessageQueueService = MessageQueueService()
 
     @staticmethod
-    def required_creator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+    def required_creator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T | None]]:
         """
         Decorator to check if the user is the bot creator.
         If the user is not the creator, an error message is sent.
@@ -42,7 +42,7 @@ class AuthDecorators:
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args, **kwargs) -> T:
+        async def wrapper(self, message: Message, *args, **kwargs) -> T | None:
             user_service: UserService = UserService()
             user: User = await user_service.get_user_by_telegram_id(message.from_user.id)
 
@@ -54,7 +54,7 @@ class AuthDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             return await func(self, message, *args, **kwargs)
 
@@ -86,14 +86,14 @@ class AuthDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             return await func(self, message, *args, **kwargs)
 
         return wrapper
 
     @staticmethod
-    def required_user_registration(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+    def required_user_registration(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T | None]]:
         """
         Decorator to check if the user is registered in the system.
         If the user is not registered, an error message is sent.
@@ -119,14 +119,14 @@ class AuthDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             return await func(self, message, *args, **kwargs)
 
         return wrapper
 
     @staticmethod
-    def required_chat_bind(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+    def required_chat_bind(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T | None]]:
         """
         Decorator to check if the command is executed in a chat that is bound to the bot.
         If the chat is not bound, an error message is sent.
@@ -150,14 +150,14 @@ class AuthDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             return await func(self, message, *args, **kwargs)
 
         return wrapper
 
     @staticmethod
-    def required_not_private_chat(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+    def required_not_private_chat(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T | None]]:
         """
         Decorator to check if the command is executed in a chat that is not private.
 
@@ -169,7 +169,7 @@ class AuthDecorators:
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args, **kwargs) -> T:
+        async def wrapper(self, message: Message, *args, **kwargs) -> T | None:
             if not hasattr(message, "chat") or message.chat is None:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -177,7 +177,7 @@ class AuthDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             if message.chat.type == ChatType.PRIVATE:
                 await self.message_queue_service.send_message(
@@ -186,7 +186,7 @@ class AuthDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             return await func(self, message, *args, **kwargs)
 
