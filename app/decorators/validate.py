@@ -6,9 +6,11 @@ from aiogram.types import Message
 
 from app.services import MessageQueueService
 from app.utils import ValidationResult
-from app.utils import validate_callsign_format, validate_datetime_format
-
-from config import settings
+from app.utils import (
+    validate_callsign_format, 
+    validate_datetime_format,
+    send_callsign_validation_error
+)
 
 T = TypeVar('T')
 
@@ -30,7 +32,7 @@ class CallsignDecorators:
         self.message_queue_service: MessageQueueService = MessageQueueService()
 
     @staticmethod
-    def validate_callsign_create(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+    def validate_callsign_create(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T | None]]:
         """
         Decorator for validating callsign in the /reg command.
         Checks that the callsign meets the requirements:
@@ -48,7 +50,7 @@ class CallsignDecorators:
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> T:
+        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> T | None:
             if not message.text:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -58,7 +60,7 @@ class CallsignDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             command_parts: list[str] = message.text.split()
             if len(command_parts) != 2:
@@ -76,33 +78,27 @@ class CallsignDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             callsign: str = command_parts[1].strip()
 
             validation_result: ValidationResult = await validate_callsign_format(callsign)
             if not validation_result.is_valid:
-                await self.message_queue_service.send_message(
+                await send_callsign_validation_error(
+                    message_queue_service=self.message_queue_service,
                     chat_id=message.chat.id,
-                    text=f'❌ Неверный формат позывного.\n\n'
-                         f'{validation_result.error_message}\n\n'
-                         f'Используйте: `/reg позывной`\n\n'
-                         f'Требования к позывному:\n'
-                         f'🔤 Только латинские буквы\n'
-                         f'📏 Длина от 1 до 20 символов\n'
-                         f'🚫 Без цифр, спец символов и пробелов\n'
-                         f'🆔 Позывной должен быть уникальным',
-                    parse_mode='Markdown',
+                    validation_result=validation_result,
+                    command='/reg',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             return await func(self, message, callsign, *args, **kwargs)
 
         return wrapper
 
     @staticmethod
-    def validate_callsign_update(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+    def validate_callsign_update(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T | None]]:
         """
         Decorator for validating callsign in the /update command.
         If a callsign is provided, checks that it meets the requirements:
@@ -120,7 +116,7 @@ class CallsignDecorators:
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> T:
+        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> T | None:
             if not message.text:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -130,7 +126,7 @@ class CallsignDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             command_parts: list[str] = message.text.split()
 
@@ -141,20 +137,14 @@ class CallsignDecorators:
                 validation_result: ValidationResult = await validate_callsign_format(callsign)
 
                 if not validation_result.is_valid:
-                    await self.message_queue_service.send_message(
+                    await send_callsign_validation_error(
+                        message_queue_service=self.message_queue_service,
                         chat_id=message.chat.id,
-                        text=f'❌ Неверный формат позывного.\n\n'
-                             f'{validation_result.error_message}\n\n'
-                             f'Используйте: `/update позывной`\n\n'
-                             f'Требования к позывному:\n'
-                             f'🔤 Только латинские буквы\n'
-                             f'📏 Длина от 1 до 20 символов\n'
-                             f'🚫 Без цифр, спец символов и пробелов\n'
-                             f'🆔 Позывной должен быть уникальным',
-                        parse_mode='Markdown',
+                        validation_result=validation_result,
+                        command='/update',
                         message_id=message.message_id
                     )
-                    return
+                    return None
 
             return await func(self, message, *args, **kwargs)
 
@@ -174,7 +164,7 @@ class SurveyCreationDecorators:
         self.message_queue_service: MessageQueueService = MessageQueueService()
 
     @staticmethod
-    def validate_survey_create(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+    def validate_survey_create(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T | None]]:
         """
         Decorator for validating survey creation in the /create_survey command.
         Checks that the command parameters meet the requirements:
@@ -191,7 +181,7 @@ class SurveyCreationDecorators:
         """
 
         @wraps(func)
-        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> T:
+        async def wrapper(self, message: Message, *args: Any, **kwargs: Any) -> T | None:
             if not message.text:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
@@ -203,7 +193,7 @@ class SurveyCreationDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             text_after_command: str = message.text[len('/create_survey '):].strip()
 
@@ -223,7 +213,7 @@ class SurveyCreationDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             parts: list[str] = text_after_command.rsplit(' + ', 1)
 
@@ -242,7 +232,7 @@ class SurveyCreationDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             survey_name: str = parts[0].strip()
             end_datetime_str: str = parts[1].strip()
@@ -261,7 +251,7 @@ class SurveyCreationDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             validation_datetime_result: ValidationResult = await validate_datetime_format(end_datetime_str)
 
@@ -276,7 +266,7 @@ class SurveyCreationDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
 
             if len(survey_name) > 100:
                 await self.message_queue_service.send_message(
@@ -287,7 +277,7 @@ class SurveyCreationDecorators:
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
-                return
+                return None
             
             end_datetime: datetime = validation_datetime_result.parsed_datetime
 
