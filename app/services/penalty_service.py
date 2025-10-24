@@ -25,10 +25,7 @@ class PenaltyService:
     async def add_penalty(
             user_id: int,
             survey_id: int,
-            reason: str,
-            penalty_date: datetime = datetime.now(
-                tz=settings.timezone_zoneinfo
-            ),
+            reason: str
     ) -> Penalty:
         """
         Adds a new penalty point to the user.
@@ -45,8 +42,7 @@ class PenaltyService:
         penalty: Penalty = Penalty(
             user_id=user_id,
             survey_id=survey_id,
-            reason=reason,
-            penalty_date=penalty_date
+            reason=reason
         )
         await penalty.save()
         return penalty
