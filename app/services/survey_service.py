@@ -43,3 +43,13 @@ class SurveyService:
             list[Survey]: List of active Survey objects
         """
         return await Survey.filter(ended_at__gt=datetime.now(tz=self.tz)).all()
+    
+    @staticmethod
+    async def delete_all_surveys() -> int:
+        """
+        Deletes all surveys (penalties will be deleted automatically via CASCADE).
+
+        Returns:
+            int: Number of deleted survey records
+        """
+        return await Survey.all().delete()
