@@ -209,29 +209,35 @@ class AdminHandlers:
 
                     else:
                         error_text = await response.text()
+                        logger.error(
+                            'Failed to create survey via n8n. Status: %s, Response: %s',
+                            response.status, error_text
+                        )
                         await self.message_queue_service.send_message(
                             chat_id=message.chat.id,
                             text=(
-                                f'❌ Не удалось создать опрос.\n\n'
-                                f'Статус: {response.status},\nОтвет: {error_text}'
+                                f'❌ Не удалось отправить опрос на создание. '
+                                f'Попробуйте еще раз позже.'
                             ),
                             parse_mode='Markdown',
                             message_id=message.message_id
                         )
 
             except aiohttp.ClientError as e:
+                logger.error('Error connecting to n8n: %s', str(e))
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
-                    text=f'❌ Ошибка при подключении к n8n: {e}',
+                    text=f'❌ Ошибка при подключении к n8n. Попробуйте еще раз.',
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
                 return
 
             except Exception as e:
+                logger.error('Unexpected error while connecting to n8n: %s', str(e))
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
-                    text=f'❌ Произошла ошибка при создании опроса: {e}',
+                    text=f'❌ Неизвестная ошибка при создании опроса.',
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
@@ -355,6 +361,7 @@ class AdminHandlers:
 
         elif action == 'confirm':
             await self.chat_service.unbind_chat()
+            await self.survey_service.delete_all_surveys()
             await self.user_service.delete_all_users_exclude_creators()
             await callback.message.edit_text(
                 '✅ Чат успешно отвязан, все пользователи удалены.'
