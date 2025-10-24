@@ -9,8 +9,10 @@ from aiogram.types import Message
 
 from app.decorators import AuthDecorators as Auth
 from app.decorators import CallsignDecorators as Callsign
-from app.models import User, Survey
-from app.services import UserService, ChatService, SurveyService, MessageQueueService
+from app.models import User, Survey, Penalty
+from app.services import (
+    UserService, ChatService, SurveyService, MessageQueueService, PenaltyService
+)
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -44,6 +46,7 @@ class UserHandlers:
         self.user_service: UserService = UserService()
         self.chat_service: ChatService = ChatService()
         self.survey_service: SurveyService = SurveyService()
+        self.penalty_service = PenaltyService()
         self.message_queue_service: MessageQueueService = MessageQueueService()
         self.tz: ZoneInfo = settings.timezone_zoneinfo
         self._datetime_format: str = '%d.%m.%Y %H:%M'
@@ -62,6 +65,7 @@ class UserHandlers:
         self.router.message(Command('update'))(self.update_command)
         self.router.message(Command('profile'))(self.profile_command)
         self.router.message(Command('surveys'))(self.surveys_command)
+        self.router.message(Command('my_penalties'))(self.my_penalties_command)
 
     async def start_command(self, message: Message) -> None:
         """
@@ -107,6 +111,7 @@ class UserHandlers:
             '• `/update позывной` - Обновить позывной или данные профиля\n'
             '• `/profile` - Посмотреть информацию о себе\n'
             '• `/surveys` - Список активных опросов\n'
+            '• `/my_penalties` - Показать мои штрафные баллы\n'
             '• `/help` - Показать эту справку\n\n'
             '🔧 Администратор:\n'
             '• `/reserve позывной` - Повесить или снять бронь на прохождение опросов '
@@ -148,8 +153,12 @@ class UserHandlers:
             if user_exists:
                 await self.message_queue_service.send_message(
                     chat_id=message.chat.id,
-                    text=f'❌ Вы уже зарегистрированы в системе.\n\n'
-                         f'Ваш позывной: *{user_exists.callsign.capitalize()}*',
+                    text=(
+                        f'❌ Вы уже зарегистрированы в системе.\n\n'
+                        f'Ваш позывной: *{user_exists.callsign.capitalize()}*\n\n'
+                        f'Если нужно обновить позывной, то вызовите команду:\n'
+                        f'`/update новый_позывной`'
+                    ),
                     parse_mode='Markdown',
                     message_id=message.message_id
                 )
@@ -168,19 +177,22 @@ class UserHandlers:
 
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
-                text=f'✅ Вы успешно зарегистрировались!\n'
-                     f'Позывной: {user.callsign.capitalize()}\n'
-                     f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
-                     f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
-                     f'Username: {f'@{user.username.replace('_', r'\_')}' if user.username else 'Username не указан'}',
+                text=(
+                    f'✅ Вы успешно зарегистрировались!\n'
+                    f'Позывной: {user.callsign.capitalize()}\n'
+                    f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
+                    f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
+                    f'Username: {f'@{user.username.replace('_', r'\_')}' if user.username else 'Username не указан'}'
+                ),
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
 
         except ValueError as ve:
+            logger.error('ValueError during registration: %s', str(ve))
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
-                text=f'❌ Ошибка регистрации: {ve}',
+                text=f'❌ Ошибка при регистрации. Были переданы неправильные данные.',
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
@@ -188,7 +200,7 @@ class UserHandlers:
             logger.error('Error occurred during registration: %s\n%s', e, traceback.format_exc())
             await self.message_queue_service.send_message(
                 chat_id=message.chat.id,
-                text='❌ Произошла ошибка при регистрации. Пожалуйста, попробуйте позже.',
+                text='❌ Непредвиденная ошибка при регистрации. Пожалуйста, попробуйте позже.',
                 parse_mode='Markdown',
                 message_id=message.message_id
             )
@@ -318,5 +330,45 @@ class UserHandlers:
             text=surveys_text,
             parse_mode='Markdown',
             disable_web_page_preview=True,
+            message_id=message.message_id
+        )
+
+    @Auth.required_user_registration
+    async def my_penalties_command(self, message: Message) -> None:
+        """
+        Command handler for /my_penalties. Sends a list of user's penalties.
+
+        Args:
+            message (Message): Incoming message from the user.
+
+        Returns:
+            None
+        """
+        user: User = await self.user_service.get_user_by_telegram_id(message.from_user.id)
+        users_penalties: list[Penalty] = await self.penalty_service.get_user_penalties(user=user)
+
+        if not users_penalties:
+            await self.message_queue_service.send_message(
+                chat_id=message.chat.id,
+                text='✅ У вас нет штрафных баллов.',
+                parse_mode='Markdown',
+                message_id=message.message_id
+            )
+            return
+
+        count_penalties: int = len(users_penalties)
+        penalties_text: str = f'⚠️ *Кол-во штрафных баллов: {count_penalties}*\n\n'
+
+        for index, penalty in enumerate(users_penalties, start=1):
+            penalties_text += (
+                f'• *#{index} Причина:* {penalty.reason}\n'
+                f'  🕒 *Дата штрафа:* '
+                f'{penalty.penalty_date.astimezone(tz=self.tz).strftime(self._datetime_format)}\n\n'
+            )
+
+        await self.message_queue_service.send_message(
+            chat_id=message.chat.id,
+            text=penalties_text,
+            parse_mode='Markdown',
             message_id=message.message_id
         )
