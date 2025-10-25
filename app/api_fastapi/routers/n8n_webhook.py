@@ -182,8 +182,10 @@ async def new_form_webhook(
 
         if not bound_chat:
             logger.warning('No bound chat found to send the form data.')
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail='No bound chat configured for sending form notifications.')
+            return WebhookResponse(
+                success='ok',
+                data={'message': 'No bound chat configured for sending form data.'}
+            )
 
         new_form_text: str = (
             f'Запущен новый опрос:\n\n'
@@ -245,8 +247,10 @@ async def survey_completion_status_webhook(
 
         if not bound_chat:
             logger.warning('No bound chat found to send the survey completion status.')
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail='No bound chat configured for sending survey completion status.')
+            return WebhookResponse(
+                success='ok',
+                data={'message': 'No bound chat configured for sending survey completion status.'}
+            )
 
         survey, not_answered_users = await _prepare_not_answered_users_object(
             survey_service=survey_service,
@@ -354,8 +358,10 @@ async def send_survey_finished_webhook(
 
         if not bound_chat:
             logger.warning('No bound chat found to send the survey finished message.')
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail='No bound chat configured for sending survey finished message.')
+            return WebhookResponse(
+                success='ok',
+                data={'message': 'No bound chat configured for sending survey finished message.'}
+            )
 
         survey, not_answered_users = await _prepare_not_answered_users_object(
             survey_service=survey_service,
