@@ -145,6 +145,7 @@ class AdminHandlers:
         )
 
     @Auth.required_admin
+    @Auth.required_chat_bind
     @CreateSurvey.validate_survey_create
     async def create_survey_command(self, message: Message, title: str, ended_at: datetime) -> None:
         """
