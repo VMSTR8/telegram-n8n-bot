@@ -22,6 +22,20 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
+        env:
+          TELEGRAM__BOT_TOKEN: '123456:TEST_BOT_TOKEN_FOR_TESTING'
+          TELEGRAM__CREATOR_ID: '123456789'
+          DATABASE__HOST: 'localhost'
+          DATABASE__PORT: '5432'
+          DATABASE__USER: 'test_db'
+          DATABASE__PASSWORD: 'test_password'
+          DATABASE__BASENAME: 'test_db'
+          RABBITMQ__HOST: 'localhost'
+          RABBITMQ__PORT: '5672'
+          RABBITMQ__USER: 'test_user'
+          RABBITMQ__PASSWORD: 'test_password'
+          N8N__N8N_WEBHOOK_URL: 'http://localhost:5678/webhook-test'
+          N8N__N8N_WEBHOOK_SECRET: 'test_n8n_secret'
         run: |
           python3 -m pytest
 
