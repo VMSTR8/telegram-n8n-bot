@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
 import pytest
-from httpx import AsyncClient
 from fastapi import status
+from httpx import AsyncClient
 
 from app.models import Chat, Survey, User
 
@@ -31,9 +31,8 @@ class TestNewFormWebhook:
         mock_mq_service.send_and_pin_message = AsyncMock()
 
         with patch('app.api_fastapi.routers.n8n_webhook.settings', test_settings), \
-             patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
-             patch('app.api_fastapi.dependencies.MessageQueueService', return_value=mock_mq_service):
-
+                patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
+                patch('app.api_fastapi.dependencies.MessageQueueService', return_value=mock_mq_service):
             form_data = {
                 'id': 1,
                 'google_form_id': 'test_form_123',
@@ -64,7 +63,7 @@ class TestNewFormWebhook:
     ):
         """
         Test new form webhook when no bound chat is configured.
-        Should return 400 error.
+        Should return 200 with informational message.
         """
         mock_chat_service = MagicMock()
         mock_chat_service.get_bound_chat = AsyncMock(return_value=None)
@@ -86,8 +85,10 @@ class TestNewFormWebhook:
                 headers={'X-N8N-Secret-Token': test_settings.n8n.n8n_webhook_secret}
             )
 
-            assert response.status_code == status.HTTP_400_BAD_REQUEST
-            assert 'No bound chat configured' in response.json()['detail']
+            assert response.status_code == status.HTTP_200_OK
+            response_data = response.json()
+            assert response_data['success'] == 'ok'
+            assert 'No bound chat configured' in response_data['data']['message']
 
     async def test_new_form_webhook_invalid_data(
             self,
@@ -141,11 +142,10 @@ class TestSurveyCompletionStatusWebhook:
         )
 
         with patch('app.api_fastapi.routers.n8n_webhook.settings', test_settings), \
-             patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
-             patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
-             patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
-             patch('app.api_fastapi.routers.n8n_webhook.send_bulk_messages') as mock_send_bulk:
-
+                patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
+                patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
+                patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
+                patch('app.api_fastapi.routers.n8n_webhook.send_bulk_messages') as mock_send_bulk:
             survey_responses = {
                 'google_form_id': test_survey.google_form_id,
                 'answers': [
@@ -189,11 +189,10 @@ class TestSurveyCompletionStatusWebhook:
         )
 
         with patch('app.api_fastapi.routers.n8n_webhook.settings', test_settings), \
-             patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
-             patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
-             patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
-             patch('app.api_fastapi.routers.n8n_webhook.send_bulk_messages') as mock_send_bulk:
-
+                patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
+                patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
+                patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
+                patch('app.api_fastapi.routers.n8n_webhook.send_bulk_messages') as mock_send_bulk:
             survey_responses = {
                 'google_form_id': test_survey.google_form_id,
                 'answers': [
@@ -217,8 +216,8 @@ class TestSurveyCompletionStatusWebhook:
             test_settings
     ):
         """
-        Test survey completion status when no bound chat is configured.
-        Should return 400 error.
+        Test new form webhook when no bound chat is configured.
+        Should return 200 with informational message.
         """
         mock_chat_service = MagicMock()
         mock_chat_service.get_bound_chat = AsyncMock(return_value=None)
@@ -235,7 +234,10 @@ class TestSurveyCompletionStatusWebhook:
                 headers={'X-N8N-Secret-Token': test_settings.n8n.n8n_webhook_secret}
             )
 
-            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            assert response.status_code == status.HTTP_200_OK
+            response_data = response.json()
+            assert response_data['success'] == 'ok'
+            assert 'No bound chat configured' in response_data['data']['message']
 
 
 @pytest.mark.asyncio
@@ -274,12 +276,11 @@ class TestSurveyFinishedWebhook:
         mock_penalty_service.get_all_users_with_three_penalties = AsyncMock(return_value=[])
 
         with patch('app.api_fastapi.routers.n8n_webhook.settings', test_settings), \
-             patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
-             patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
-             patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
-             patch('app.api_fastapi.dependencies.PenaltyService', return_value=mock_penalty_service), \
-             patch('app.api_fastapi.routers.n8n_webhook.send_bulk_messages') as mock_send_bulk:
-
+                patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
+                patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
+                patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
+                patch('app.api_fastapi.dependencies.PenaltyService', return_value=mock_penalty_service), \
+                patch('app.api_fastapi.routers.n8n_webhook.send_bulk_messages') as mock_send_bulk:
             survey_responses = {
                 'google_form_id': test_survey.google_form_id,
                 'answers': []
@@ -328,12 +329,11 @@ class TestSurveyFinishedWebhook:
         mock_mq_service.send_message = AsyncMock()
 
         with patch('app.api_fastapi.routers.n8n_webhook.settings', test_settings), \
-             patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
-             patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
-             patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
-             patch('app.api_fastapi.dependencies.PenaltyService', return_value=mock_penalty_service), \
-             patch('app.api_fastapi.dependencies.MessageQueueService', return_value=mock_mq_service):
-
+                patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
+                patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
+                patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
+                patch('app.api_fastapi.dependencies.PenaltyService', return_value=mock_penalty_service), \
+                patch('app.api_fastapi.dependencies.MessageQueueService', return_value=mock_mq_service):
             survey_responses = {
                 'google_form_id': test_survey.google_form_id,
                 'answers': [
@@ -390,13 +390,12 @@ class TestSurveyFinishedWebhook:
         )
 
         with patch('app.api_fastapi.routers.n8n_webhook.settings', test_settings), \
-             patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
-             patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
-             patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
-             patch('app.api_fastapi.dependencies.PenaltyService', return_value=mock_penalty_service), \
-             patch('app.api_fastapi.routers.n8n_webhook.ban_user_from_chat') as mock_ban_user, \
-             patch('app.api_fastapi.routers.n8n_webhook.send_bulk_messages') as mock_send_bulk:
-
+                patch('app.api_fastapi.dependencies.ChatService', return_value=mock_chat_service), \
+                patch('app.api_fastapi.dependencies.SurveyService', return_value=mock_survey_service), \
+                patch('app.api_fastapi.dependencies.UserService', return_value=mock_user_service), \
+                patch('app.api_fastapi.dependencies.PenaltyService', return_value=mock_penalty_service), \
+                patch('app.api_fastapi.routers.n8n_webhook.ban_user_from_chat') as mock_ban_user, \
+                patch('app.api_fastapi.routers.n8n_webhook.send_bulk_messages') as mock_send_bulk:
             survey_responses = {
                 'google_form_id': test_survey.google_form_id,
                 'answers': []
@@ -424,7 +423,7 @@ class TestSurveyFinishedWebhook:
     ):
         """
         Test survey finished when no bound chat is configured.
-        Should return 400 error.
+        Should return 200 with informational message.
         """
         mock_chat_service = MagicMock()
         mock_chat_service.get_bound_chat = AsyncMock(return_value=None)
@@ -441,7 +440,10 @@ class TestSurveyFinishedWebhook:
                 headers={'X-N8N-Secret-Token': test_settings.n8n.n8n_webhook_secret}
             )
 
-            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            assert response.status_code == status.HTTP_200_OK
+            response_data = response.json()
+            assert response_data['success'] == 'ok'
+            assert 'No bound chat configured' in response_data['data']['message']
 
 
 class TestSplitUsersIntoChunks:
