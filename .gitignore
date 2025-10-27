@@ -112,7 +112,7 @@ n8n_data_backup/
 .idea/
 
 # Other
-.github/
+.github/copilot-instructions.md
 
 # Migrations
 migrations/
