@@ -69,5 +69,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/telegrambot_n8n:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/telegrambot_n8n:${{ env.VERSION }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/telegram-n8n-bot:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/telegram-n8n-bot:${{ env.VERSION }}
