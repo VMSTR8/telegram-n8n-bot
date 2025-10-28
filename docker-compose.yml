@@ -97,7 +97,7 @@ services:
       - traefik-network
   
   celery_worker:
-    build: .
+    image: vmstr8/telegram-n8n-bot:latest
     container_name: celery_worker
     command: celery -A app.celery_app worker --loglevel=info
     environment:
@@ -126,7 +126,7 @@ services:
       - traefik-network
 
   api:
-    build: .
+    image: vmstr8/telegram-n8n-bot:latest
     container_name: fastapi_app
     environment:
       - TELEGRAM__BOT_TOKEN=${TELEGRAM__BOT_TOKEN}
@@ -161,14 +161,33 @@ services:
       - ./migrations:/app/migrations
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.telegram-bot.rule=Host(`${WEBHOOK_DOMAIN}`)"
-      - "traefik.http.routers.telegram-bot.entrypoints=websecure"
-      - "traefik.http.routers.telegram-bot.tls=true"
-      - "traefik.http.routers.telegram-bot.tls.certresolver=myresolver"
+      # Service definition
       - "traefik.http.services.telegram-bot.loadbalancer.server.port=8000"
-      - "traefik.http.routers.telegram-bot.middlewares=telegram-webhook-headers"
+      
+      # Middleware definitions for IP whitelists
+      - "traefik.http.middlewares.webhook-whitelist.ipwhitelist.sourcerange=${WHITELIST__LOCALHOST},${WHITELIST__TELEGRAM_IPS},${WHITELIST__ADDITIONAL_IPS}"
+      - "traefik.http.middlewares.api-whitelist.ipwhitelist.sourcerange=${WHITELIST__LOCALHOST},${WHITELIST__ADDITIONAL_IPS}"
+      # Middleware for headers (used by both routers)
       - "traefik.http.middlewares.telegram-webhook-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
       - "traefik.http.middlewares.telegram-webhook-headers.headers.customrequestheaders.X-Forwarded-Port=443"
+
+      # Router for /webhook (higher priority to match first)
+      - "traefik.http.routers.telegram-bot-webhook.rule=Host(`${WEBHOOK_DOMAIN}`) && PathPrefix(`/webhook`)"
+      - "traefik.http.routers.telegram-bot-webhook.entrypoints=websecure"
+      - "traefik.http.routers.telegram-bot-webhook.tls=true"
+      - "traefik.http.routers.telegram-bot-webhook.tls.certresolver=myresolver"
+      - "traefik.http.routers.telegram-bot-webhook.priority=100"
+      - "traefik.http.routers.telegram-bot-webhook.middlewares=webhook-whitelist,telegram-webhook-headers"
+      - "traefik.http.routers.telegram-bot-webhook.service=telegram-bot"
+      
+      # Router for all other paths
+      - "traefik.http.routers.telegram-bot-api.rule=Host(`${WEBHOOK_DOMAIN}`)"
+      - "traefik.http.routers.telegram-bot-api.entrypoints=websecure"
+      - "traefik.http.routers.telegram-bot-api.tls=true"
+      - "traefik.http.routers.telegram-bot-api.tls.certresolver=myresolver"
+      - "traefik.http.routers.telegram-bot-api.priority=50"
+      - "traefik.http.routers.telegram-bot-api.middlewares=api-whitelist,telegram-webhook-headers"
+      - "traefik.http.routers.telegram-bot-api.service=telegram-bot"
     restart: unless-stopped
     profiles: [ production ]
     networks:
@@ -202,10 +221,12 @@ services:
       - ./n8n_data:/home/node/.n8n
     labels:
       - "traefik.enable=true"
+      - "traefik.http.middlewares.n8n-whitelist.ipwhitelist.sourcerange=${WHITELIST__LOCALHOST},${WHITELIST__ADDITIONAL_IPS}"
       - "traefik.http.routers.n8n.rule=Host(`${N8N_WEBHOOK_DOMAIN}`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls=true"
       - "traefik.http.routers.n8n.tls.certresolver=myresolver"
+      - "traefik.http.routers.n8n.middlewares=n8n-whitelist"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
     profiles: [ production ]
     ports:
