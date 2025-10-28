@@ -28,6 +28,7 @@ from app.services import (
     PenaltyService,
     MessageQueueService
 )
+from app.utils import escape_markdown
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -260,7 +261,7 @@ async def survey_completion_status_webhook(
 
         if not_answered_users:
             not_answered_list_items: list[str] = [
-                f'@{data.username}'.replace('_', r'\_') if data.username
+                f'@{escape_markdown(data.username)}' if data.username
                 else callsign
                 for callsign, data in not_answered_users.items()
             ]
@@ -383,7 +384,7 @@ async def send_survey_finished_webhook(
                         reason=f'Не прошёл опрос по мероприятию "{survey.title}"'
                     )
                     penalized_users_list.append(
-                        f'@{data.username}'.replace('_', r'\_') if data.username
+                        f'@{escape_markdown(data.username)}' if data.username
                         else callsign
                     )
 
