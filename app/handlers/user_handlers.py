@@ -13,6 +13,7 @@ from app.models import User, Survey, Penalty
 from app.services import (
     UserService, ChatService, SurveyService, MessageQueueService, PenaltyService
 )
+from app.utils import escape_markdown
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -176,10 +177,10 @@ class UserHandlers:
                 chat_id=message.chat.id,
                 text=(
                     f'✅ Вы успешно зарегистрировались!\n'
-                    f'Позывной: {user.callsign.capitalize()}\n'
-                    f'Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
-                    f'Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
-                    f'Username: {f'@{user.username.replace('_', r'\_')}' if user.username else 'Username не указан'}'
+                    f'Позывной: {escape_markdown(user.callsign.capitalize())}\n'
+                    f'Имя: {escape_markdown(user.first_name.capitalize()) if user.first_name else 'Не указано'}\n'
+                    f'Фамилия: {escape_markdown(user.last_name.capitalize()) if user.last_name else 'Не указана'}\n'
+                    f'Username: {f'@{escape_markdown(user.username)}' if user.username else 'Username не указан'}'
                 ),
                 parse_mode='Markdown',
                 message_id=message.message_id
@@ -273,10 +274,10 @@ class UserHandlers:
 
         profile_text: str = (
             f'👤 *Профиль пользователя*\n\n'
-            f'🆔 Позывной: `{user.callsign.capitalize()}`\n'
-            f'👤 Имя: {user.first_name.capitalize() if user.first_name else 'Не указано'}\n'
-            f'👥 Фамилия: {user.last_name.capitalize() if user.last_name else 'Не указана'}\n'
-            f'🔗 Username: {f'@{user.username.replace('_', r'\_')}' if user.username else 'Не указан'}\n'
+            f'🆔 Позывной: `{escape_markdown(user.callsign.capitalize())}`\n'
+            f'👤 Имя: {escape_markdown(user.first_name.capitalize()) if user.first_name else 'Не указано'}\n'
+            f'👥 Фамилия: {escape_markdown(user.last_name.capitalize()) if user.last_name else 'Не указана'}\n'
+            f'🔗 Username: {f'@{escape_markdown(user.username)}' if user.username else 'Не указан'}\n'
             f'📅 Зарегистрирован: '
             f'{user.created_at.astimezone(tz=self.tz).strftime(self._datetime_format)}\n'
             f'🔄 Профиль обновлён: '
