@@ -1,11 +1,11 @@
+from aiogram import Bot
 from aiogram import Router
 from aiogram.filters import ChatMemberUpdatedFilter, IS_MEMBER, IS_NOT_MEMBER
 from aiogram.types import ChatMemberUpdated, User as TelegramUser, Chat as TelegramChat
-from aiogram import Bot
 
 from app.models import UserRole, Chat, User
-
 from app.services import UserService, ChatService, PenaltyService, MessageQueueService
+from app.utils import escape_markdown
 
 
 class SystemHandlers:
@@ -96,7 +96,7 @@ class SystemHandlers:
             await self._extract_event_context(event, is_join=True)
         if not result:
             return
-        
+
         user: TelegramUser
         chat: TelegramChat
         bot: Bot
@@ -110,10 +110,10 @@ class SystemHandlers:
             await self.user_service.activate_user(telegram_id=user.id)
             # Remove all penalties upon rejoining
             await self.penalty_service.delete_user_penalties(user=user_exists)
-            
+
             await self.message_queue_service.send_message(
                 chat_id=chat.id,
-                text=f'Добро пожаловать в чат, {user_exists.callsign.capitalize()}!\n\n'
+                text=f'Добро пожаловать в чат, {escape_markdown(user_exists.callsign.capitalize())}!\n\n'
                      f'Вы уже зарегистрированы в боте, поэтому вам доступны '
                      f'все слэш-команды. Справка доступна через вызов '
                      f'`/help`.\n\n'
@@ -131,7 +131,7 @@ class SystemHandlers:
         if not user_exists:
             await self.message_queue_service.send_message(
                 chat_id=chat.id,
-                text=f'Добро пожаловать в чат, {user.full_name.replace('_', r'\_')}!\n\n'
+                text=f'Добро пожаловать в чат, {escape_markdown(user.full_name)}!\n\n'
                      f'Вы еще не зарегистрированы в боте, поэтому вам необходимо '
                      f'пройти регистрацию, используя команду:\n\n'
                      f'`/reg позывной`\n\n'
@@ -167,7 +167,7 @@ class SystemHandlers:
             await self._extract_event_context(event, is_join=False)
         if not result:
             return
-        
+
         user: TelegramUser
         chat: TelegramChat
         bot: Bot
@@ -176,9 +176,9 @@ class SystemHandlers:
         user, chat, bot, user_exists = result
 
         if not user_exists:
-            text: str = f'{user.full_name.replace('_', r'\_')} удален(а) из чата.'
+            text: str = f'{escape_markdown(user.full_name)} удален(а) из чата.'
         else:
-            text: str = f'`{user_exists.callsign.capitalize()}` удален(а) из чата.'
+            text: str = f'`{escape_markdown(user_exists.callsign.capitalize())}` удален(а) из чата.'
 
         await self.user_service.deactivate_user(telegram_id=user.id)
 
