@@ -72,7 +72,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://tg.reddawn.ru/webhook/new-form",
+        "url": "http://api:8000/webhook/new-form",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -440,7 +440,7 @@
     "timezone": "Europe/Moscow",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "576e1fd0-8d6d-49a1-ab1c-1375791e486f",
+  "versionId": "57f9554c-b729-44dc-b0b1-2a6474e65505",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b6c3a627dbf639be723176dbe11bee0da19ab2ae118884efc1823b5132ed3c61"
