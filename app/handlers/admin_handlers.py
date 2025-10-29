@@ -196,7 +196,7 @@ class AdminHandlers:
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
-                        f'{self.n8n.url}/webhook/create-google-form',
+                        'http://n8n:5678/webhook/create-google-form',
                         json=survey_data.model_dump(),
                         headers=headers,
                 ) as response:

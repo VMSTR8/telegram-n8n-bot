@@ -240,7 +240,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://tg.reddawn.ru/webhook/send-survey-completion-status",
+        "url": "http://api:8000/webhook/send-survey-completion-status",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -392,7 +392,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://tg.reddawn.ru/webhook/send-survey-finished",
+        "url": "http://api:8000/webhook/send-survey-finished",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -636,7 +636,7 @@
     "timezone": "Europe/Moscow",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "ae549f85-b40d-4d78-acff-2ef6815fd1a3",
+  "versionId": "ed5c0c72-a878-4c42-aa7b-c0231da35d77",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b6c3a627dbf639be723176dbe11bee0da19ab2ae118884efc1823b5132ed3c61"
