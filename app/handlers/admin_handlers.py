@@ -62,7 +62,7 @@ class AdminHandlers:
         self.message_queue_service: MessageQueueService = MessageQueueService()
         self.survey_template_service: SurveyTemplateService = SurveyTemplateService()
         self.n8n: SimpleNamespace = SimpleNamespace(
-            url=settings.n8n.n8n_webhook_url,
+            internal_url=settings.services.n8n_service,
             header=settings.n8n.n8n_webhook_header,
             secret=settings.n8n.n8n_webhook_secret
         )
@@ -196,7 +196,7 @@ class AdminHandlers:
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
-                        'http://n8n:5678/webhook/create-google-form',
+                        f'{self.n8n.internal_url}/webhook/create-google-form',
                         json=survey_data.model_dump(),
                         headers=headers,
                 ) as response:
