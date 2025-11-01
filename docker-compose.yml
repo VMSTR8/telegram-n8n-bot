@@ -144,6 +144,7 @@ services:
       - RABBITMQ__PASSWORD=${RABBITMQ__PASSWORD}
       - TZ=${TIMEZONE}
       - POLLING_MODE=${POLLING_MODE} # False for webhook mode, True for polling mode
+      - INTERNAL__N8N_SERVICE=${INTERNAL__N8N_SERVICE}
       - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
       - N8N_WEBHOOK_SECRET=${N8N_WEBHOOK_SECRET}
       - N8N_WEBHOOK_HEADER=${N8N_WEBHOOK_HEADER}
@@ -155,6 +156,8 @@ services:
       rabbitmq:
         condition: service_healthy
       traefik:
+        condition: service_started
+      celery_worker:
         condition: service_started
     volumes:
       - ./logs:/app/logs
