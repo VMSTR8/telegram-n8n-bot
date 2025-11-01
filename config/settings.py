@@ -44,14 +44,21 @@ class N8NSettings(BaseSettings):
     n8n_webhook_secret: str | None = Field(default=None, description='n8n webhook secret key')
 
 
+class ServiceSettings(BaseSettings):
+    """Settings for external services"""
+    bot_service: str = Field(default='http://api:8000', description='URL of the internal bot service')
+    n8n_service: str = Field(default='http://n8n:5678', description='URL of the internal n8n service')
+
+
 class AppSettings(BaseSettings):
     """Main application settings"""
     timezone: str = Field(default='Europe/Moscow', description='Application timezone', exclude=True)
     polling_mode: bool = Field(default=True, description='Enable polling mode instead of webhook')
     telegram: TelegramBotSettings = Field(default_factory=TelegramBotSettings)
+    n8n: N8NSettings = Field(default_factory=N8NSettings)
+    services: ServiceSettings = Field(default_factory=ServiceSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     rabbitmq: RabbitMQSettings = Field(default_factory=RabbitMQSettings)
-    n8n: N8NSettings = Field(default_factory=N8NSettings)
 
     @property
     def timezone_zoneinfo(self) -> ZoneInfo:
