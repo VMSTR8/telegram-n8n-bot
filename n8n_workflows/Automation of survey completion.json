@@ -145,7 +145,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const questionId = $node[\"Filter qID by name\"].json[\"questionId\"];\nconst responses = items[0].json.responses || [];\nconst googleFormId = $('GET Form data').first().json.formId || [];\n\nconst answers = [];\n\nfor (const resp of responses) {\n  const ans = resp.answers?.[questionId];\n  if (ans?.textAnswers?.answers?.length) {\n    for (const a of ans.textAnswers.answers) {\n      answers.push({ answer: a.value });\n    }\n  }\n}\n\nreturn {\n  json: {\n    google_form_id: googleFormId,\n    answers: answers\n  }\n};"
+        "jsCode": "const questionId = $node[\"Filter qID by name\"].json[\"questionId\"];\nconst responses = items[0].json.responses || [];\nconst googleFormId = $('GET Form data').first().json.formId || [];\n\nconst answers = [];\n\nfor (const resp of responses) {\n  const ans = resp.answers?.[questionId];\n  if (ans?.textAnswers?.answers?.length) {\n    for (const a of ans.textAnswers.answers) {\n      answers.push({ answer: a.value.trim() });\n    }\n  }\n}\n\nreturn {\n  json: {\n    google_form_id: googleFormId,\n    answers: answers\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -346,7 +346,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const questionId = $node[\"Filter qID by name (survey closed)\"].json[\"questionId\"];\nconst responses = items[0].json.responses || [];\nconst googleFormId = $('GET Form data (survey closed)').first().json.formId || [];\n\nconst answers = [];\n\nfor (const resp of responses) {\n  const ans = resp.answers?.[questionId];\n  if (ans?.textAnswers?.answers?.length) {\n    for (const a of ans.textAnswers.answers) {\n      answers.push({ answer: a.value });\n    }\n  }\n}\n\nreturn {\n  json: {\n    google_form_id: googleFormId,\n    answers: answers\n  }\n};"
+        "jsCode": "const questionId = $node[\"Filter qID by name (survey closed)\"].json[\"questionId\"];\nconst responses = items[0].json.responses || [];\nconst googleFormId = $('GET Form data (survey closed)').first().json.formId || [];\n\nconst answers = [];\n\nfor (const resp of responses) {\n  const ans = resp.answers?.[questionId];\n  if (ans?.textAnswers?.answers?.length) {\n    for (const a of ans.textAnswers.answers) {\n      answers.push({ answer: a.value.trim() });\n    }\n  }\n}\n\nreturn {\n  json: {\n    google_form_id: googleFormId,\n    answers: answers\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -636,7 +636,7 @@
     "timezone": "Europe/Moscow",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "ed5c0c72-a878-4c42-aa7b-c0231da35d77",
+  "versionId": "387792f3-89c8-4c54-a60e-edb1b629dda0",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b6c3a627dbf639be723176dbe11bee0da19ab2ae118884efc1823b5132ed3c61"
