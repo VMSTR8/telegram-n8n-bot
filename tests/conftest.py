@@ -64,6 +64,8 @@ def test_settings() -> AppSettings:
     settings.n8n.n8n_webhook_header = 'X-N8N-Secret-Token'
     settings.n8n.n8n_webhook_secret = 'test_n8n_secret'
 
+    settings.recaptcha_secret_key = 'test_recaptcha_secret_key_6LcExAMPLE'
+
     return settings
 
 
