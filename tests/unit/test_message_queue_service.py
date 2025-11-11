@@ -4,7 +4,7 @@ import pytest
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from celery.result import AsyncResult
 
-from app.schemas import QueueResult, TaskStatus
+from app.schemas import QueueResult, TaskStatus, TaskResponse
 from app.services.message_queue_service import MessageQueueService
 
 
@@ -522,3 +522,317 @@ class TestMessageQueueServiceLogging:
 
         assert 'Bulk messages queued' in caplog_debug.text
         assert 'count: 5' in caplog_debug.text
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestMessageQueueServiceSendFormToCreator:
+    """
+    Unit tests for MessageQueueService.send_form_to_creator_with_tracking method.
+    """
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_success(
+            self,
+            mock_celery_task: Mock
+    ):
+        """
+        Test sending form to creator with successful response.
+        """
+        mock_task_result = Mock(spec=AsyncResult)
+        mock_task_result.id = 'test-task-form-123'
+        mock_task_result.get.return_value = {
+            'status': 'success',
+            'message': 'Form sent successfully'
+        }
+        mock_celery_task.delay.return_value = mock_task_result
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {
+            'form_id': 'test_form_123',
+            'responses': {'question1': 'answer1'}
+        }
+
+        result: TaskResponse = await service.send_form_to_creator_with_tracking(
+            creator_id=123456789,
+            form_data=form_data
+        )
+
+        assert result.status == 'success'
+        assert result.message == 'Form sent successfully'
+
+        mock_celery_task.delay.assert_called_once_with(
+            creator_id=123456789,
+            form_data=form_data
+        )
+        mock_task_result.get.assert_called_once_with(timeout=15)
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_with_custom_timeout(
+            self,
+            mock_celery_task: Mock
+    ):
+        """
+        Test sending form with custom timeout.
+        """
+        mock_task_result = Mock(spec=AsyncResult)
+        mock_task_result.id = 'test-task-form-456'
+        mock_task_result.get.return_value = {
+            'status': 'success',
+            'message': 'Form sent'
+        }
+        mock_celery_task.delay.return_value = mock_task_result
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {'form_id': 'test_form_456'}
+
+        result: TaskResponse = await service.send_form_to_creator_with_tracking(
+            creator_id=987654321,
+            form_data=form_data,
+            timeout=30
+        )
+
+        assert result.status == 'success'
+        mock_task_result.get.assert_called_once_with(timeout=30)
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_task_returns_error(
+            self,
+            mock_celery_task: Mock,
+            caplog_debug: pytest.LogCaptureFixture
+    ):
+        """
+        Test when Celery task returns error status.
+        """
+        mock_task_result = Mock(spec=AsyncResult)
+        mock_task_result.id = 'test-task-form-error'
+        mock_task_result.get.return_value = {
+            'status': 'error',
+            'message': 'Failed to send message to creator'
+        }
+        mock_celery_task.delay.return_value = mock_task_result
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {'form_id': 'test_form_error'}
+
+        result: TaskResponse = await service.send_form_to_creator_with_tracking(
+            creator_id=123456789,
+            form_data=form_data
+        )
+
+        assert result.status == 'error'
+        assert result.message == 'Failed to send message to creator'
+        assert 'Failed to send form response to creator 123456789' in caplog_debug.text
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_timeout_exception(
+            self,
+            mock_celery_task: Mock,
+            caplog_debug: pytest.LogCaptureFixture
+    ):
+        """
+        Test when task exceeds timeout and raises TimeoutError.
+        """
+        from celery.exceptions import TimeoutError as CeleryTimeoutError
+        
+        mock_task_result = Mock(spec=AsyncResult)
+        mock_task_result.id = 'test-task-timeout'
+        mock_task_result.get.side_effect = CeleryTimeoutError('Task timed out')
+        mock_celery_task.delay.return_value = mock_task_result
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {'form_id': 'test_timeout'}
+
+        result: TaskResponse = await service.send_form_to_creator_with_tracking(
+            creator_id=123456789,
+            form_data=form_data,
+            timeout=5
+        )
+
+        assert result.status == 'error'
+        assert 'Timeout or error occurred' in result.message
+        assert 'Task timed out' in result.message
+        assert 'Error sending form response to creator 123456789' in caplog_debug.text
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_general_exception(
+            self,
+            mock_celery_task: Mock,
+            caplog_debug: pytest.LogCaptureFixture
+    ):
+        """
+        Test error handling when general exception occurs.
+        """
+        mock_celery_task.delay.side_effect = Exception('Connection refused')
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {'form_id': 'test_exception'}
+
+        result: TaskResponse = await service.send_form_to_creator_with_tracking(
+            creator_id=123456789,
+            form_data=form_data
+        )
+
+        assert result.status == 'error'
+        assert 'Connection refused' in result.message
+        assert 'Error sending form response to creator 123456789' in caplog_debug.text
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_with_complex_form_data(
+            self,
+            mock_celery_task: Mock
+    ):
+        """
+        Test sending form with complex nested data structure.
+        """
+        mock_task_result = Mock(spec=AsyncResult)
+        mock_task_result.id = 'test-task-complex'
+        mock_task_result.get.return_value = {
+            'status': 'success',
+            'message': 'Complex form sent'
+        }
+        mock_celery_task.delay.return_value = mock_task_result
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {
+            'form_id': 'complex_form',
+            'responses': {
+                'text_field': 'Some answer',
+                'multiple_choice': ['option1', 'option2'],
+                'nested_data': {
+                    'sub_field': 'value',
+                    'list_field': [1, 2, 3]
+                }
+            },
+            'metadata': {
+                'timestamp': '2025-11-11T12:00:00',
+                'user_id': 999
+            }
+        }
+
+        result: TaskResponse = await service.send_form_to_creator_with_tracking(
+            creator_id=123456789,
+            form_data=form_data
+        )
+
+        assert result.status == 'success'
+        
+        call_kwargs = mock_celery_task.delay.call_args.kwargs
+        assert call_kwargs['form_data']['form_id'] == 'complex_form'
+        assert 'responses' in call_kwargs['form_data']
+        assert 'metadata' in call_kwargs['form_data']
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_task_returns_taskresponse_object(
+            self,
+            mock_celery_task: Mock
+    ):
+        """
+        Test when task returns TaskResponse object instead of dict.
+        """
+        from app.schemas import TaskResponse
+        
+        mock_task_result = Mock(spec=AsyncResult)
+        mock_task_result.id = 'test-task-object'
+        # Task returns TaskResponse object directly
+        mock_task_result.get.return_value = TaskResponse(
+            status='success',
+            message='Object response'
+        )
+        mock_celery_task.delay.return_value = mock_task_result
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {'form_id': 'test_object'}
+
+        result: TaskResponse = await service.send_form_to_creator_with_tracking(
+            creator_id=123456789,
+            form_data=form_data
+        )
+
+        assert result.status == 'success'
+        assert result.message == 'Object response'
+        assert isinstance(result, TaskResponse)
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_logs_success(
+            self,
+            mock_celery_task: Mock,
+            caplog_debug: pytest.LogCaptureFixture
+    ):
+        """
+        Test that successful form submission is properly logged.
+        """
+        mock_task_result = Mock(spec=AsyncResult)
+        mock_task_result.id = 'test-task-log-success'
+        mock_task_result.get.return_value = {
+            'status': 'success',
+            'message': 'Logged successfully'
+        }
+        mock_celery_task.delay.return_value = mock_task_result
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {'form_id': 'log_test'}
+
+        await service.send_form_to_creator_with_tracking(
+            creator_id=555666777,
+            form_data=form_data
+        )
+
+        assert 'Form response queued to send to creator 555666777' in caplog_debug.text
+        assert 'test-task-log-success' in caplog_debug.text
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_with_empty_form_data(
+            self,
+            mock_celery_task: Mock
+    ):
+        """
+        Test sending form with empty form data dict.
+        """
+        mock_task_result = Mock(spec=AsyncResult)
+        mock_task_result.id = 'test-task-empty'
+        mock_task_result.get.return_value = {
+            'status': 'success',
+            'message': 'Empty form processed'
+        }
+        mock_celery_task.delay.return_value = mock_task_result
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {}
+
+        result: TaskResponse = await service.send_form_to_creator_with_tracking(
+            creator_id=123456789,
+            form_data=form_data
+        )
+
+        assert result.status == 'success'
+        call_kwargs = mock_celery_task.delay.call_args.kwargs
+        assert call_kwargs['form_data'] == {}
+
+    @patch('app.services.message_queue_service.send_form_to_creator')
+    async def test_send_form_to_creator_with_minimal_timeout(
+            self,
+            mock_celery_task: Mock
+    ):
+        """
+        Test sending form with minimal timeout value.
+        """
+        mock_task_result = Mock(spec=AsyncResult)
+        mock_task_result.id = 'test-task-min-timeout'
+        mock_task_result.get.return_value = {
+            'status': 'success',
+            'message': 'Quick response'
+        }
+        mock_celery_task.delay.return_value = mock_task_result
+        
+        service: MessageQueueService = MessageQueueService()
+        form_data = {'form_id': 'quick_test'}
+
+        result: TaskResponse = await service.send_form_to_creator_with_tracking(
+            creator_id=123456789,
+            form_data=form_data,
+            timeout=1
+        )
+
+        assert result.status == 'success'
+        mock_task_result.get.assert_called_once_with(timeout=1)
