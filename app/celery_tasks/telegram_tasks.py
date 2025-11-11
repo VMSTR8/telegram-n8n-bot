@@ -7,13 +7,14 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramRetryAfter, TelegramAPIError
+from aiogram.exceptions import TelegramRetryAfter, TelegramAPIError, TelegramForbiddenError
 from aiogram.types import Message, InlineKeyboardMarkup
 from aiohttp import ClientConnectionError, ClientError
 from celery.result import AsyncResult
 
 from app.celery_app import celery_app
 from app.schemas import TaskResponse
+from app.text_utils import escape_markdown
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -123,7 +124,11 @@ def send_telegram_message(
 
         logger.info('Message sent successfully to chat %s, message ID: %s', chat_id, result.message_id)
         return TaskResponse(status='success', message_id=result.message_id)
-
+    
+    except TelegramForbiddenError as tfe:
+        logger.error('Bot was blocked by user in chat %s: %s', chat_id, str(tfe))
+        return TaskResponse(status='error', message='Bot was blocked by the user.')
+    
     except TelegramRetryAfter as e:
         # Handling 429 error - retry after specified time
         retry_after: int = e.retry_after
@@ -328,3 +333,97 @@ def send_bulk_messages(self, messages: list) -> list[TaskResponse]:
             results.append(TaskResponse(status='error', message=str(e)))
 
     return results
+
+@celery_app.task(bind=True, max_retries=5)
+def send_form_to_creator(
+    self,
+    creator_id: int,
+    form_data: dict
+) -> TaskResponse | None:
+    """
+    Send a filled form to the creator via Telegram.
+    
+    Args:
+        self: The task instance.
+        creator_id (int): Telegram user ID of the creator
+        form_data (dict): Dictionary containing form fields:
+    
+    Returns:
+        A TaskResponse object with sending status and message ID on success, or error details on failure
+    """
+    async def _send_form():
+
+        if form_data['telegram']:
+            contact_method = form_data['telegram']
+        else:
+            contact_method = form_data['phone']
+
+        text = (
+            f'📋 Новая заявка в команду:\n\n'
+            f'👤 *Имя*: {escape_markdown(form_data['name'])}\n'
+            f'🎂 *Возраст*: {form_data['age']}\n'
+            f'💬 *Способ связи*: {'Telegram' if form_data['telegram'] else 'Телефон'}\n'
+            f'✉️ *Контакт*: {escape_markdown(contact_method)}\n'
+            f'🎮 *Опыт игры*: {'Играл' if form_data['experience'] == 'yes' else 'Не играл'}'
+        )
+
+        async with _bot_context() as bot:
+            send_result: Message = await bot.send_message(
+                chat_id=creator_id,
+                text=text,
+                parse_mode='Markdown'
+            )
+
+            return send_result
+        
+    try:
+        result: Message = asyncio.run(_send_form())
+
+        logger.info(
+            'Form sent successfully to creator %s, message ID: %s', 
+            creator_id, 
+            result.message_id
+        )
+
+        return TaskResponse(
+            status='success', 
+            message_id=result.message_id,
+            message='Form delivered successfully to creator.'
+        ).model_dump()
+        
+    except TelegramForbiddenError as tfe:
+        logger.error('Creator %s blocked the bot: %s', creator_id, str(tfe))
+        return TaskResponse(
+            status='error', 
+            message='Creator has blocked the bot. Cannot deliver the form.'
+        ).model_dump()
+    
+    except TelegramRetryAfter as tra:
+        retry_after: int = tra.retry_after
+        logger.warning('Rate limit hit for creator %s. Retrying after %d seconds', creator_id, retry_after)
+        raise self.retry(countdown=retry_after, max_retries=5)
+    
+    except (ClientConnectionError, TimeoutError, ClientError) as ce:
+        return _handle_network_error(self, creator_id, ce).model_dump()
+    
+    except TelegramAPIError as tae:
+        error_message: str = str(tae)
+        if any(
+                keyword in error_message.lower() for keyword in [
+                    'cannot connect', 'connection', 'timeout', 'network'
+                ]
+        ):
+            logger.warning('Telegram API error sending form to creator %s: %s', creator_id, str(tae))
+            return _handle_network_error(self, creator_id, ClientConnectionError(error_message)).model_dump()
+    
+    except Exception as e:
+        logger.error(
+            'Unexpected error sending form to creator %s: %s\n%s', 
+            creator_id, 
+            str(e), 
+            traceback.format_exc()
+        )
+        return TaskResponse(
+            status='error', 
+            message=str(e)
+        ).model_dump()
