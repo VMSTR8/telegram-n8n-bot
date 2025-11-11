@@ -1,6 +1,6 @@
 from zoneinfo import ZoneInfo
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -54,6 +54,9 @@ class AppSettings(BaseSettings):
     """Main application settings"""
     timezone: str = Field(default='Europe/Moscow', description='Application timezone', exclude=True)
     polling_mode: bool = Field(default=True, description='Enable polling mode instead of webhook')
+    recaptcha_secret_key: str | None = Field(default='recaptcha', description='Secret key for reCAPTCHA verification')
+    cors_allowed_origins: list[str] = Field(default=['*'], description='CORS allowed origins')
+    cors_allowed_methods: list[str] = Field(default=['GET', 'POST'], description='CORS allowed methods')
     telegram: TelegramBotSettings = Field(default_factory=TelegramBotSettings)
     n8n: N8NSettings = Field(default_factory=N8NSettings)
     services: ServiceSettings = Field(default_factory=ServiceSettings)
