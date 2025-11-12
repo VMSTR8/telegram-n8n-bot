@@ -28,7 +28,7 @@ from app.services import (
     PenaltyService,
     MessageQueueService
 )
-from app.utils import escape_markdown
+from app.text_utils import escape_markdown
 from config import settings
 
 logger = logging.getLogger(__name__)

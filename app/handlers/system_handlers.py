@@ -5,7 +5,7 @@ from aiogram.types import ChatMemberUpdated, User as TelegramUser, Chat as Teleg
 
 from app.models import UserRole, Chat, User
 from app.services import UserService, ChatService, PenaltyService, MessageQueueService
-from app.utils import escape_markdown
+from app.text_utils import escape_markdown
 
 
 class SystemHandlers:

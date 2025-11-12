@@ -1,4 +1,5 @@
 from .celery_schemas import TaskResponse, QueueResult, TaskStatus
+from .submit_form_schemas import SubmitFormSchema
 from .survey_schemas import SurveyData
 
 __all__ = [
@@ -6,4 +7,5 @@ __all__ = [
     'QueueResult',
     'TaskStatus',
     'SurveyData',
+    'SubmitFormSchema',
 ]

@@ -5,8 +5,13 @@ from typing import AsyncGenerator
 
 from aiogram import Bot
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.api_fastapi.routers import telegram_webhook_router, n8n_webhook_router
+from app.api_fastapi.routers import (
+    telegram_webhook_router, 
+    n8n_webhook_router, 
+    recaptcha_verification_router
+)
 from app.bot_telegram import (
     init_database,
     close_database,
@@ -104,14 +109,23 @@ def create_app() -> FastAPI:
         title='Telegram Bot with n8n integration',
         description='A FastAPI application that integrates a Telegram bot with n8n workflow automation.',
         version='1.0.0',
-        docs_url=None,
+        docs_url="/docs",
         redoc_url=None,
         redirect_slashes=False,
         lifespan=lifespan
     )
 
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allowed_origins,
+        allow_credentials=True,
+        allow_methods=settings.cors_allowed_methods,
+        allow_headers=['*'],
+    )
+
     app.include_router(telegram_webhook_router, tags=['telegram_webhook'])
     app.include_router(n8n_webhook_router, tags=['n8n_webhook'])
+    app.include_router(recaptcha_verification_router, tags=['recaptcha_verification'])
 
     return app
 

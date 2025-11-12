@@ -8,9 +8,10 @@ from app.celery_app import celery_app
 from app.celery_tasks.telegram_tasks import (
     send_telegram_message as celery_send_telegram_message,
     send_bulk_messages as celery_send_bulk_messages,
-    send_and_pin_telegram_message
+    send_and_pin_telegram_message,
+    send_form_to_creator
 )
-from app.schemas import QueueResult, TaskStatus
+from app.schemas import QueueResult, TaskStatus, TaskResponse
 
 logger = logging.getLogger(__name__)
 
@@ -190,4 +191,56 @@ class MessageQueueService:
                 task_id=task_id,
                 status='error',
                 message=str(e)
+            )
+
+    @staticmethod
+    async def send_form_to_creator_with_tracking(
+            creator_id: int,
+            form_data: dict,
+            timeout: int = 15
+    ) -> TaskResponse:
+        """
+        Send form response to creator with tracking and timeout.
+        
+        Args:
+            creator_id (int): Creator's Telegram ID
+            form_data (dict): Form data to send
+            timeout (int): Timeout in seconds for task completion
+        
+        Returns:
+            TaskResponse: Result of sending form
+        """
+        try:
+            task: AsyncResult = send_form_to_creator.delay(
+                creator_id=creator_id,
+                form_data=form_data
+            )
+
+            logger.info('Form response queued to send to creator %s, task ID: %s', creator_id, task.id)
+
+            result = task.get(timeout=timeout)
+
+            if isinstance(result, dict):
+                task_response = TaskResponse(**result)
+            else:
+                task_response = result
+
+            if task_response.status == 'error':
+                logger.error(
+                    'Failed to send form response to creator %s: %s',
+                    creator_id,
+                    task_response.message
+                )
+            return task_response
+
+        except Exception as e:
+            logger.error(
+                'Error sending form response to creator %s: %s | Traceback: %s',
+                creator_id,
+                str(e),
+                traceback.format_exc()
+            )
+            return TaskResponse(
+                status='error',
+                message=f'Timeout or error occurred while sending form response to creator: {str(e)}'
             )

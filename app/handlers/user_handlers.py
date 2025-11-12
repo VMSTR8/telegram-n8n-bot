@@ -13,7 +13,7 @@ from app.models import User, Survey, Penalty
 from app.services import (
     UserService, ChatService, SurveyService, MessageQueueService, PenaltyService
 )
-from app.utils import escape_markdown
+from app.text_utils import escape_markdown
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
