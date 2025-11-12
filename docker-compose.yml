@@ -185,6 +185,15 @@ services:
       - "traefik.http.routers.telegram-bot-webhook.priority=100"
       - "traefik.http.routers.telegram-bot-webhook.middlewares=webhook-whitelist,telegram-webhook-headers"
       - "traefik.http.routers.telegram-bot-webhook.service=telegram-bot"
+
+      # Router for /recaptcha-verify (public access, no IP whitelist)
+      - "traefik.http.routers.telegram-bot-recaptcha.rule=Host(`${WEBHOOK_DOMAIN}`) && PathPrefix(`/recaptcha-verify`)"
+      - "traefik.http.routers.telegram-bot-recaptcha.entrypoints=websecure"
+      - "traefik.http.routers.telegram-bot-recaptcha.tls=true"
+      - "traefik.http.routers.telegram-bot-recaptcha.tls.certresolver=myresolver"
+      - "traefik.http.routers.telegram-bot-recaptcha.priority=75"
+      - "traefik.http.routers.telegram-bot-recaptcha.middlewares=telegram-webhook-headers"
+      - "traefik.http.routers.telegram-bot-recaptcha.service=telegram-bot"
       
       # Router for all other paths
       - "traefik.http.routers.telegram-bot-api.rule=Host(`${WEBHOOK_DOMAIN}`)"
